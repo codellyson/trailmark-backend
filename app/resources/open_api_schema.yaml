@@ -1,0 +1,426 @@
+openapi: 3.0.0
+info:
+  title: TrailMark API
+  version: 1.0.0
+  description: API for managing outdoor events, bookings, and photography services
+
+servers:
+  - url: http://localhost:3333/api/v1
+    description: Development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        data:
+          type: null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                fullName:
+                  type: string
+        error:
+          type: null
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        basePrice:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [draft, published, in_progress, completed, cancelled]
+        weatherPolicy:
+          type: object
+          properties:
+            cancellationPolicy:
+              type: string
+            refundPolicy:
+              type: string
+            weatherConditions:
+              type: array
+              items:
+                type: string
+        difficultyLevel:
+          type: string
+        requiredEquipment:
+          type: array
+          items:
+            type: string
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events:
+    get:
+      tags:
+        - Events
+      summary: List all events
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  error:
+                    type: null
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+
+    post:
+      tags:
+        - Events
+      summary: Create a new event
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - eventDate
+                - location
+                - capacity
+                - basePrice
+                - difficultyLevel
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                description:
+                  type: string
+                  minLength: 10
+                eventDate:
+                  type: string
+                  format: date-time
+                location:
+                  type: string
+                capacity:
+                  type: integer
+                  minimum: 1
+                basePrice:
+                  type: number
+                  minimum: 0
+                difficultyLevel:
+                  type: string
+                requiredEquipment:
+                  type: array
+                  items:
+                    type: string
+                weatherPolicy:
+                  type: object
+                  properties:
+                    cancellationPolicy:
+                      type: string
+                    refundPolicy:
+                      type: string
+                    weatherConditions:
+                      type: array
+                      items:
+                        type: string
+                waiverText:
+                  type: string
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+                  error:
+                    type: null
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+
+  /events/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Events
+      summary: Get event details
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+                  error:
+                    type: null
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+
+    put:
+      tags:
+        - Events
+      summary: Update event details
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+                  error:
+                    type: null
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+
+    delete:
+      tags:
+        - Events
+      summary: Cancel/delete event
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Event cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: null
+                  error:
+                    type: null
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+
+  /photos:
+    post:
+      tags:
+        - Photos
+      summary: Upload a photo
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photo
+                - eventId
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                eventId:
+                  type: string
+                  format: uuid
+                takenAt:
+                  type: string
+                  format: date-time
+                galleries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      bookingId:
+                        type: string
+                        format: uuid
+                      galleryType:
+                        type: string
+                        enum: [private, public]
+                      isPublic:
+                        type: boolean
+      responses:
+        '201':
+          description: Photo uploaded successfully
+
+  /photos/{eventId}:
+    get:
+      tags:
+        - Photos
+      summary: Get event photos
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        '200':
+          description: List of photos
