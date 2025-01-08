@@ -1,12 +1,13 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
+const MiscallenousController = () => import('#controllers/miscallenous_controller')
 const EventPhotographersController = () => import('#controllers/event_photographers_controller')
 const EventAddOnsController = () => import('#controllers/event_addons_controller')
 const AuthController = () => import('#controllers/auth_controller')
 const EventsController = () => import('#controllers/events_controller')
 const PhotosController = () => import('#controllers/photos_controller')
 const BookingsController = () => import('#controllers/bookings_controller')
-
+const WebhooksController = () => import('#controllers/webhooks_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -106,5 +107,20 @@ router
       .use(middleware.auth())
 
     router.post('/payments/webhook', '#controllers/payments_controller.webhook')
+  })
+  .prefix('/api/v1')
+
+// Miscallenous routes
+router
+  .group(() => {
+    router.post('/upload-image', [MiscallenousController, 'uploadImage'])
+    router.delete('/delete-image', [MiscallenousController, 'deleteImage'])
+  })
+  .prefix('/api/v1')
+
+// Webhook routes
+router
+  .group(() => {
+    router.post('/webhooks/squad', [WebhooksController, 'squadWebhook'])
   })
   .prefix('/api/v1')

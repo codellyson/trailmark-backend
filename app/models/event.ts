@@ -1,8 +1,10 @@
-import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, hasMany, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import Booking from './booking.js'
 import User from './user.js'
+
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class Event extends BaseModel {
   @column({ isPrimary: true })
@@ -10,6 +12,12 @@ export default class Event extends BaseModel {
 
   @column()
   declare organizer_id: number
+  @belongsTo(() => User, {
+    foreignKey: 'organizer_id',
+  })
+  declare organizer: BelongsTo<typeof User>
+  @column()
+  declare capacity: number
 
   @column()
   declare status: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'
@@ -19,6 +27,17 @@ export default class Event extends BaseModel {
 
   @column()
   declare description: string
+
+  @column({
+    prepare: (value: Array<{ url: string; key: string }>) => JSON.stringify(value),
+  })
+  declare thumbnails: any[]
+
+  @column()
+  declare slug: string
+
+  @column()
+  declare event_type: string
 
   @column()
   declare location: string
@@ -38,7 +57,21 @@ export default class Event extends BaseModel {
   @column()
   declare sales_deadline: string
 
-  @column()
+  @column({
+    prepare: (
+      value: Array<{
+        ticket_name: string
+        ticket_description: string
+        ticket_capacity: number
+        sales_start_date: string
+        sales_deadline: string
+        ticket_type: 'general' | 'early_bird' | 'vip'
+        ticket_currency: string
+        ticket_currency_symbol: string
+        ticket_price: number
+      }>
+    ) => JSON.stringify(value),
+  })
   declare ticket_options: Array<{
     ticket_name: string
     ticket_description: string
@@ -100,9 +133,6 @@ export default class Event extends BaseModel {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
-
-  @belongsTo(() => User, { foreignKey: 'organizer_id' })
-  declare organizer: BelongsTo<typeof User>
 
   @hasMany(() => Booking)
   declare bookings: HasMany<typeof Booking>

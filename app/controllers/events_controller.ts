@@ -37,10 +37,16 @@ export default class EventsController {
   /**
    * Create a new event
    */
+  slugify(text: string) {
+    const randomString = Math.random().toString(36).substring(2, 15)
+    return text.toLowerCase().replace(/ /g, '-') + '-' + randomString
+  }
+
   async createEvent({ request, response, auth }: HttpContext) {
     const payload = await request.validateUsing(createEventValidator)
     // Ensure JSON fields are properly formatted
-    console.log(auth.user?.role)
+    console.log(payload)
+
     if (auth.user?.role !== 'organizer') {
       return response.forbidden({
         success: false,
@@ -50,8 +56,11 @@ export default class EventsController {
       })
     }
 
+    const slug = this.slugify(payload.title)
+
     const event = await Event.create({
       ...payload,
+      slug,
       organizer_id: auth.user!.id,
       status: 'draft',
       date: DateTime.fromISO(payload.date),
@@ -69,9 +78,9 @@ export default class EventsController {
    * Get event details
    */
   async getEvent({ params, response }: HttpContext) {
-    const event = await Event.findOrFail(params.id)
-    await event.load('organizer')
-    await event.load('photographers')
+    console.log(params.id)
+    const event = await Event.findBy('slug', params.id)
+    await event?.load('organizer')
 
     return response.json({
       success: true,

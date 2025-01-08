@@ -9,6 +9,14 @@ export const createEventValidator = vine.compile(
     end_time: vine.string(),
     location: vine.string(),
     event_type: vine.string(),
+    capacity: vine.number(),
+    thumbnails: vine.array(
+      vine.object({
+        url: vine.string(),
+        key: vine.string(),
+      })
+    ),
+    slug: vine.string().optional(),
   })
 )
 
