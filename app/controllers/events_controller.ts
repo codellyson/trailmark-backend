@@ -1,5 +1,7 @@
 import Event from '#models/event'
 import { createEventValidator, updateEventValidator } from '#validators/event'
+import { createEventAddOnValidator } from '#validators/event_add_on'
+import { createEventTicketValidator } from '#validators/event_ticket'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
@@ -146,5 +148,13 @@ export default class EventsController {
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
+  }
+
+  async createEventTicket({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(createEventTicketValidator)
+  }
+
+  async createEventAddon({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(createEventAddOnValidator)
   }
 }

@@ -13,8 +13,9 @@ const registerValidator = vine.compile(
   vine.object({
     email: vine.string().email(),
     password: vine.string().minLength(8),
-    fullName: vine.string().minLength(2),
-    role: vine.enum(['organizer', 'photographer', 'client']),
+    first_name: vine.string().minLength(2),
+    last_name: vine.string().minLength(2),
+    role: vine.enum(['organizer', 'photographer', 'user']),
   })
 )
 
@@ -36,7 +37,9 @@ export default class AuthController {
           user: {
             id: user.id,
             email: user.email,
-            fullName: user.fullName,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role: user.role,
           },
         },
         error: null,
@@ -79,7 +82,8 @@ export default class AuthController {
     const user = await User.create({
       email: payload.email,
       password: payload.password,
-      fullName: payload.fullName,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
       role: payload.role,
     })
 
@@ -93,7 +97,9 @@ export default class AuthController {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          role: user.role,
         },
       },
       error: null,
@@ -115,7 +121,9 @@ export default class AuthController {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          role: user.role,
         },
       },
       error: null,
