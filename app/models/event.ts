@@ -3,6 +3,7 @@ import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import Booking from './booking.js'
 import User from './user.js'
+import Addon from './addon.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
@@ -136,4 +137,7 @@ export default class Event extends BaseModel {
 
   @hasMany(() => Booking)
   declare bookings: HasMany<typeof Booking>
+
+  @hasMany(() => Addon)
+  declare addons: HasMany<typeof Addon>
 }

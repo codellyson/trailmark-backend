@@ -17,7 +17,16 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare id: number
 
   @column()
-  declare fullName: string | null
+  declare first_name: string | null
+
+  @column()
+  declare last_name: string | null
+
+  @column()
+  declare avatar_url: string | null
+
+  @column()
+  declare bio: string | null
 
   @column()
   declare email: string
@@ -29,18 +38,34 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare role: 'organizer' | 'photographer' | 'client'
 
   @column()
-  declare additionalInfo: {
-    phoneNumber: string
-    address: string
-    city: string
-    state: string
-    country: string
-  }
+  declare phone_number: string | null
+
   @column()
-  declare isActive: boolean
+  declare business_name: string | null
+
+  @column()
+  declare business_address: string | null
+
+  @column()
+  declare business_phone_number: string | null
+
+  @column()
+  declare business_website: string | null
+
+  @column()
+  declare status: 'active' | 'inactive' | 'suspended'
+
+  @column()
+  declare email_verified: boolean
+
+  @column()
+  declare email_verified_at: DateTime | null
+
+  @column()
+  declare remember_me_token: string | null
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
