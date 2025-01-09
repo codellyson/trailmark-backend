@@ -73,7 +73,7 @@ export default class Event extends BaseModel {
       }>
     ) => JSON.stringify(value),
   })
-  declare ticket_options: Array<{
+  declare tickets: Array<{
     ticket_name: string
     ticket_description: string
     ticket_capacity: number

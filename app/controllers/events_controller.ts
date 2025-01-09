@@ -1,7 +1,10 @@
+import Addon, { AddonStatus, AddonType } from '#models/addon'
 import Event from '#models/event'
+import Ticket, { TicketStatus, TicketType } from '#models/ticket'
+import User from '#models/user'
 import { createEventValidator, updateEventValidator } from '#validators/event'
-import { createEventAddOnValidator } from '#validators/event_add_on'
-import { createEventTicketValidator } from '#validators/event_ticket'
+import { createAddonValidator, createEventAddOnValidator } from '#validators/event_add_on'
+import { createEventTicketValidator, updateEventTicketValidator } from '#validators/event_ticket'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
@@ -80,9 +83,10 @@ export default class EventsController {
    * Get event details
    */
   async getEvent({ params, response }: HttpContext) {
-    console.log(params.id)
     const event = await Event.findBy('slug', params.id)
     await event?.load('organizer')
+    await event?.load('tickets_options')
+    await event?.load('addons')
 
     return response.json({
       success: true,
@@ -151,10 +155,156 @@ export default class EventsController {
   }
 
   async createEventTicket({ request, response, auth }: HttpContext) {
+    console.log('createEventTicket', request.body())
     const payload = await request.validateUsing(createEventTicketValidator)
+    const params = request.params()
+    const event = await Event.findOrFail(params.eventId)
+
+    const tickets = await Ticket.createMany(
+      payload.data.map((ticket) => ({
+        ...ticket,
+        event_id: Number(event.id),
+        status: 'draft' as const,
+        type: ticket.type as TicketType,
+      }))
+    )
+
+    return response.json({
+      success: true,
+      data: tickets,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
   }
 
   async createEventAddon({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(createEventAddOnValidator)
+    const payload = await request.validateUsing(createAddonValidator)
+
+    const addonsData = payload.add_ons.map((addon) => {
+      const baseAddon = {
+        name: addon.name,
+        description: addon.description,
+        type: addon.type as AddonType,
+        price: addon.price,
+        currency: addon.currency,
+        currency_symbol: addon.currency_symbol,
+        capacity: addon.capacity,
+        status: addon.status as AddonStatus,
+        event_id: addon.event_id,
+      }
+      switch (addon.type) {
+        case 'photography':
+          return {
+            ...baseAddon,
+            photo_count: addon.photo_count,
+            photographer_id: null, // Set to null for now until you have valid photographer IDs
+            equipment_details: null,
+            transportation_details: null,
+          }
+        case 'equipment_rental':
+          return {
+            ...baseAddon,
+            equipment_details: addon.equipment_details,
+            photo_count: null,
+            photographer_id: null,
+            transportation_details: null,
+          }
+        case 'transportation':
+          return {
+            ...baseAddon,
+            transportation_details: addon.transportation_details,
+            photo_count: null,
+            photographer_id: null,
+            equipment_details: null,
+          }
+        default:
+          return {
+            ...baseAddon,
+            photo_count: null,
+            photographer_id: null,
+            equipment_details: null,
+            transportation_details: null,
+          }
+      }
+    })
+
+    const addons = await Addon.createMany(addonsData)
+
+    return response.json({
+      success: true,
+      data: addons,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+  async isValidPhotographer(photographerId: number) {
+    const photographer = await User.find(photographerId)
+    return photographer !== null
+  }
+
+  async getEventTickets({ request, response, auth }: HttpContext) {
+    const params = request.params()
+    const event = await Event.findOrFail(params.eventId)
+    const tickets = await Ticket.query().where('event_id', event.id).preload('event')
+
+    return response.json({
+      success: true,
+      data: tickets,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async updateEventTicket({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(updateEventTicketValidator)
+    const ticketData = payload.data
+    const params = request.params()
+    const event = await Event.findOrFail(params.eventId)
+    const tickets = []
+
+    if (ticketData.id) {
+      const ticketFound = await Ticket.findOrFail(ticketData.id)
+      await ticketFound.merge(ticketData).save()
+      tickets.push(ticketFound)
+    } else {
+      const ticket = await Ticket.create({
+        ...ticketData,
+        event_id: Number(event.id),
+      })
+      tickets.push(ticket)
+    }
+
+    return response.json({
+      success: true,
+      data: tickets,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async deleteEventTicket({ request, response, auth }: HttpContext) {
+    const params = request.params()
+    const ticket = await Ticket.findOrFail(params.id)
+    await ticket.delete()
+
+    return response.json({
+      success: true,
+      data: null,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async deleteEventAddon({ request, response, auth }: HttpContext) {
+    const params = request.params()
+    const addon = await Addon.findOrFail(params.id)
+    await addon.delete()
+
+    return response.json({
+      success: true,
+      data: null,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
   }
 }

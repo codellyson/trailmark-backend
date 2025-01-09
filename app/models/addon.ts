@@ -27,7 +27,7 @@ export default class Addon extends BaseModel {
   declare id: number
 
   @column()
-  declare eventId: number
+  declare event_id: number
 
   @column()
   declare name: string

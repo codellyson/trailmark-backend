@@ -6,8 +6,9 @@ import { HttpContext } from '@adonisjs/core/http'
 
 export default class MiscallenousController {
   async uploadImage({ request, response }: HttpContext) {
+    console.log(request.allFiles())
     const file = request.file('image', {
-      size: '2mb',
+      size: '10mb',
       extnames: ['jpg', 'jpeg', 'png'],
     })
 

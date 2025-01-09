@@ -12,7 +12,7 @@ export default class Ticket extends BaseModel {
   declare id: number
 
   @column()
-  declare eventId: number
+  declare event_id: number
 
   @column()
   declare name: string
@@ -57,7 +57,9 @@ export default class Ticket extends BaseModel {
   declare updatedAt: DateTime
 
   // Relationships
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+  })
   declare event: BelongsTo<typeof Event>
 
   @hasMany(() => Booking)
@@ -85,7 +87,8 @@ export default class Ticket extends BaseModel {
 
   @computed()
   get formattedPrice() {
-    return `${this.currency_symbol}${this.price.toFixed(2)}`
+    const price = typeof this.price === 'string' ? Number.parseInt(this.price) : this.price
+    return `${this.currency_symbol}${price.toFixed(2)}`
   }
 
   // Helper Methods

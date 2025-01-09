@@ -30,6 +30,31 @@ router
   })
   .prefix('/api/v1')
 
+// Event Ticket routes
+router
+  .group(() => {
+    router
+      .post('/events/:eventId/tickets', [EventsController, 'createEventTicket'])
+      .use(middleware.auth())
+
+    router
+      .post('/events/:eventId/addons', [EventsController, 'createEventAddon'])
+      .use(middleware.auth())
+
+    router
+      .get('/events/:eventId/tickets', [EventsController, 'getEventTickets'])
+      .use(middleware.auth())
+
+    router
+      .put('/events/:eventId/tickets', [EventsController, 'updateEventTicket'])
+      .use(middleware.auth())
+
+    router
+      .delete('/events/:eventId/tickets/:id', [EventsController, 'deleteEventTicket'])
+      .use(middleware.auth())
+  })
+  .prefix('/api/v1')
+
 // Event Add-on routes
 router
   .group(() => {
