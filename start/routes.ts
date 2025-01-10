@@ -8,6 +8,7 @@ const EventsController = () => import('#controllers/events_controller')
 const PhotosController = () => import('#controllers/photos_controller')
 const BookingsController = () => import('#controllers/bookings_controller')
 const WebhooksController = () => import('#controllers/webhooks_controller')
+const PhotographersController = () => import('#controllers/photographers_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -147,5 +148,16 @@ router
 router
   .group(() => {
     router.post('/webhooks/squad', [WebhooksController, 'squadWebhook'])
+  })
+  .prefix('/api/v1')
+
+// Photographers routes
+router
+  .group(() => {
+    router.get('/photographers', [PhotographersController, 'getPhotographers'])
+    router.get('/photographers/:id', [PhotographersController, 'getPhotographer'])
+    router
+      .put('/photographers/profile', [PhotographersController, 'updateProfile'])
+      .use(middleware.auth())
   })
   .prefix('/api/v1')
