@@ -64,6 +64,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare remember_me_token: string | null
 
+  @column()
+  declare preferences: Record<string, any>
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 

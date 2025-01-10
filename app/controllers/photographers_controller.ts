@@ -24,12 +24,12 @@ export default class PhotographersController {
         })
       })
       .if(filters.specialties, (q) => {
-        q.whereJsonSuperset('preferences->specialties', filters.specialties)
+        q.whereJsonSuperset('preferences->specialties', filters.specialties!)
       })
       .if(filters.price_range, (q) => {
         q.whereBetween('preferences->hourly_rate', [
-          filters.price_range.min,
-          filters.price_range.max,
+          filters.price_range?.min!,
+          filters.price_range?.max!,
         ])
       })
       .if(filters.location, (q) => {
@@ -52,12 +52,23 @@ export default class PhotographersController {
   /**
    * Get photographer profile
    */
-  async getPhotographer({ params, response }: HttpContext) {
+  async getPhotographer({ params, response, auth }: HttpContext) {
+    console.log(auth)
     const photographer = await User.query()
       .where('id', params.id)
       .where('role', 'photographer')
       .firstOrFail()
 
+    return response.json({
+      success: true,
+      data: photographer,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async getPhotographerProfile({ response, auth }: HttpContext) {
+    const photographer = await User.findOrFail(auth.user?.id)
     return response.json({
       success: true,
       data: photographer,
@@ -104,5 +115,79 @@ export default class PhotographersController {
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
+  }
+
+  /**
+   * Get photographer wallet
+   */
+  async getPhotographerWallet({ response, auth }: HttpContext) {
+    const photographer = await User.findOrFail(auth.user.id)
+    return response.json({
+      success: true,
+      data: photographer.wallet,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  /**
+   * Request photographer withdrawal
+   */
+  async requestPhotographerWithdrawal({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(photographerWithdrawalValidator)
+  }
+
+  /**
+   * Get photographer transactions
+   */
+  async getPhotographerTransactions({ response, auth }: HttpContext) {
+    const photographer = await User.findOrFail(auth.user.id)
+    return response.json({
+      success: true,
+      data: photographer.transactions,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  /**
+   * Accept photographer job
+   */
+  async acceptPhotographerJob({ params, response, auth }: HttpContext) {
+    const job = await Job.findOrFail(params.id)
+  }
+
+  /**
+   * Upload photographer job photos
+   */
+  async uploadPhotographerJobPhotos({ params, request, response, auth }: HttpContext) {
+    const job = await Job.findOrFail(params.id)
+  }
+
+  /**
+   * Get photographer jobs
+   */
+  async getPhotographerJobs({ response, auth }: HttpContext) {
+    const photographer = await User.findOrFail(auth.user.id)
+    return response.json({
+      success: true,
+      data: photographer.jobs,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  /**
+   * Get photographer job
+   */
+  async getPhotographerJob({ params, response, auth }: HttpContext) {
+    const job = await Job.findOrFail(params.id)
+  }
+
+  /**
+   * Get photographer job photos
+   */
+  async getPhotographerJobPhotos({ params, response, auth }: HttpContext) {
+    const job = await Job.findOrFail(params.id)
   }
 }

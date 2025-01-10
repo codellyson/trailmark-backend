@@ -70,30 +70,30 @@ router
   })
   .prefix('/api/v1')
 
-// Event Photographers routes
-router
-  .group(() => {
-    router
-      .post('/event-photographers', [EventPhotographersController, 'addPhotographerToEvent'])
-      .use(middleware.auth())
-    router.get('/event-photographers/:eventId', [
-      EventPhotographersController,
-      'getPhotographersForEvent',
-    ])
-    router
-      .put('/event-photographers/:id', [
-        EventPhotographersController,
-        'updateEventPhotographerStatus',
-      ])
-      .use(middleware.auth())
-    router
-      .delete('/event-photographers/:id', [
-        EventPhotographersController,
-        'removePhotographerFromEvent',
-      ])
-      .use(middleware.auth())
-  })
-  .prefix('/api/v1')
+// // Event Photographers routes
+// router
+//   .group(() => {
+//     router
+//       .post('/event-photographers', [EventPhotographersController, 'addPhotographerToEvent'])
+//       .use(middleware.auth())
+//     router.get('/event-photographers/:eventId', [
+//       EventPhotographersController,
+//       'getPhotographersForEvent',
+//     ])
+//     router
+//       .put('/event-photographers/:id', [
+//         EventPhotographersController,
+//         'updateEventPhotographerStatus',
+//       ])
+//       .use(middleware.auth())
+//     router
+//       .delete('/event-photographers/:id', [
+//         EventPhotographersController,
+//         'removePhotographerFromEvent',
+//       ])
+//       .use(middleware.auth())
+//   })
+//   .prefix('/api/v1')
 
 // Booking routes
 router
@@ -155,9 +155,29 @@ router
 router
   .group(() => {
     router.get('/photographers', [PhotographersController, 'getPhotographers'])
-    router.get('/photographers/:id', [PhotographersController, 'getPhotographer'])
+    // router.get('/photographers/:id', [PhotographersController, 'getPhotographer'])
+    router.put('/photographers/profile', [PhotographersController, 'updateProfile'])
     router
-      .put('/photographers/profile', [PhotographersController, 'updateProfile'])
+      .get('/photographers/profile', [PhotographersController, 'getPhotographerProfile'])
       .use(middleware.auth())
+
+    router.get('/photographers/jobs', [PhotographersController, 'getPhotographerJobs'])
+    router.post('/photographers/jobs/:id/accept', [
+      PhotographersController,
+      'acceptPhotographerJob',
+    ])
+    router.post('/photographers/jobs/:id/photos', [
+      PhotographersController,
+      'uploadPhotographerJobPhotos',
+    ])
+    router.get('/photographers/wallet', [PhotographersController, 'getPhotographerWallet'])
+    router.post('/photographers/withdrawal', [
+      PhotographersController,
+      'requestPhotographerWithdrawal',
+    ])
+    router.get('/photographers/transactions', [
+      PhotographersController,
+      'getPhotographerTransactions',
+    ])
   })
   .prefix('/api/v1')
