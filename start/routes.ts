@@ -154,30 +154,22 @@ router
 // Photographers routes
 router
   .group(() => {
-    router.get('/photographers', [PhotographersController, 'getPhotographers'])
-    // router.get('/photographers/:id', [PhotographersController, 'getPhotographer'])
-    router.put('/photographers/profile', [PhotographersController, 'updateProfile'])
+    // Protected routes - require authentication
     router
-      .get('/photographers/profile', [PhotographersController, 'getPhotographerProfile'])
+      .group(() => {
+        router.get('/profile', [PhotographersController, 'getPhotographerProfile'])
+        router.put('/profile', [PhotographersController, 'updateProfile'])
+        router.get('/jobs', [PhotographersController, 'getPhotographerJobs'])
+        router.post('/jobs/:id/accept', [PhotographersController, 'acceptPhotographerJob'])
+        router.post('/jobs/:id/photos', [PhotographersController, 'uploadPhotographerJobPhotos'])
+        router.get('/wallet', [PhotographersController, 'getPhotographerWallet'])
+        router.post('/withdrawal', [PhotographersController, 'requestPhotographerWithdrawal'])
+        router.get('/transactions', [PhotographersController, 'getPhotographerTransactions'])
+      })
       .use(middleware.auth())
 
-    router.get('/photographers/jobs', [PhotographersController, 'getPhotographerJobs'])
-    router.post('/photographers/jobs/:id/accept', [
-      PhotographersController,
-      'acceptPhotographerJob',
-    ])
-    router.post('/photographers/jobs/:id/photos', [
-      PhotographersController,
-      'uploadPhotographerJobPhotos',
-    ])
-    router.get('/photographers/wallet', [PhotographersController, 'getPhotographerWallet'])
-    router.post('/photographers/withdrawal', [
-      PhotographersController,
-      'requestPhotographerWithdrawal',
-    ])
-    router.get('/photographers/transactions', [
-      PhotographersController,
-      'getPhotographerTransactions',
-    ])
+    // Public routes
+    router.get('/', [PhotographersController, 'getPhotographers'])
+    // router.get('/:id', [PhotographersController, 'getPhotographer'])
   })
-  .prefix('/api/v1')
+  .prefix('/api/v1/photographers')

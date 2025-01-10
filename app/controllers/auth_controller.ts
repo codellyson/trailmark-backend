@@ -1,6 +1,5 @@
 import User from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'
-import { createUserValidator } from '#validators/user'
 import vine from '@vinejs/vine'
 
 const loginValidator = vine.compile(
@@ -10,49 +9,106 @@ const loginValidator = vine.compile(
   })
 )
 
+const registerValidator = vine.compile(
+  vine.object({
+    email: vine.string().email(),
+    password: vine.string().minLength(8),
+    first_name: vine.string().minLength(2),
+    last_name: vine.string().minLength(2),
+    role: vine.enum(['organizer', 'photographer', 'user']),
+  })
+)
+
 export default class AuthController {
   /**
    * Handle user login
    */
   async login({ request, response }: HttpContext) {
-    const { email, password } = await request.validateUsing(loginValidator)
+    const payload = await request.validateUsing(loginValidator)
 
-    const user = await User.verifyCredentials(email, password)
-    const token = await User.accessTokens.create(user)
+    try {
+      const user = await User.findBy('email', payload.email)
+      if (!user) {
+        return response.unauthorized({
+          success: false,
+          data: null,
+          error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' },
+          meta: { timestamp: new Date().toISOString() },
+        })
+      }
+      const token = await User.accessTokens.create(user)
 
-    return response.json({
-      success: true,
-      data: {
-        user,
-        token: token.value,
-      },
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
+      return response.json({
+        success: true,
+        data: {
+          token: token.value?.release(),
+          user: {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role: user.role,
+          },
+        },
+        error: null,
+        meta: { timestamp: new Date().toISOString() },
+      })
+    } catch (error) {
+      return response.badRequest({
+        success: false,
+        data: null,
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid email or password',
+        },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
   }
 
   /**
    * Handle user registration
    */
   async register({ request, response }: HttpContext) {
-    const payload = await request.validateUsing(createUserValidator)
+    const payload = await request.validateUsing(registerValidator)
 
+    // Check if user already exists
+    const existingUser = await User.findBy('email', payload.email)
+    if (existingUser) {
+      return response.conflict({
+        success: false,
+        data: null,
+        error: {
+          code: 'EMAIL_TAKEN',
+          message: 'Email is already registered',
+        },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
+
+    // Create new user
     const user = await User.create({
       email: payload.email,
       password: payload.password,
       first_name: payload.first_name,
       last_name: payload.last_name,
       role: payload.role,
-      status: 'active', // Default status for new users
     })
 
+    // Generate access token
     const token = await User.accessTokens.create(user)
 
     return response.json({
       success: true,
       data: {
-        user,
-        token: token.value,
+        token: token.value?.release(),
+        user: {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          role: user.role,
+        },
       },
       error: null,
       meta: { timestamp: new Date().toISOString() },
@@ -78,28 +134,6 @@ export default class AuthController {
           role: user.role,
         },
       },
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
-  }
-
-  async me({ response, auth }: HttpContext) {
-    const user = auth.user!
-
-    return response.json({
-      success: true,
-      data: user,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
-  }
-
-  async logout({ response, auth }: HttpContext) {
-    await auth.use('api').logout()
-
-    return response.json({
-      success: true,
-      data: null,
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
