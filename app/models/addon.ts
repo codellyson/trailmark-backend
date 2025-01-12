@@ -1,5 +1,11 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo, computed } from '@adonisjs/lucid/orm'
+import {
+  BaseModel,
+  column,
+  belongsTo,
+  computed,
+  SnakeCaseNamingStrategy,
+} from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Event from './event.js'
 import User from './user.js'
@@ -22,6 +28,8 @@ export interface TransportationDetails {
   dropoffLocation?: string
   includes?: string[]
 }
+
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class Addon extends BaseModel {
   @column({ isPrimary: true })
