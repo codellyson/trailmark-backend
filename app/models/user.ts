@@ -2,8 +2,10 @@ import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { compose } from '@adonisjs/core/helpers'
 import hash from '@adonisjs/core/services/hash'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { BaseModel, column, SnakeCaseNamingStrategy, hasOne } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
+import type { HasOne } from '@adonisjs/lucid/types/relations'
+import Wallet from './wallet.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -11,6 +13,7 @@ const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
 })
 
 export default class User extends compose(BaseModel, AuthFinder) {
+  static namingStrategy = new SnakeCaseNamingStrategy()
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
   @column({ isPrimary: true })
@@ -72,4 +75,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+
+  @hasOne(() => Wallet)
+  declare wallet: HasOne<typeof Wallet>
 }

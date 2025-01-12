@@ -83,7 +83,8 @@ export default class EventsController {
    * Get event details
    */
   async getEvent({ params, response }: HttpContext) {
-    const event = await Event.findBy('slug', params.id)
+    console.log({ params })
+    const event = await Event.query().where('slug', params.id).firstOrFail()
     await event?.load('organizer')
     await event?.load('tickets_options')
     await event?.load('addons')
@@ -158,6 +159,7 @@ export default class EventsController {
     console.log('createEventTicket', request.body())
     const payload = await request.validateUsing(createEventTicketValidator)
     const params = request.params()
+    console.log({ params })
     const event = await Event.findOrFail(params.eventId)
 
     const tickets = await Ticket.createMany(
@@ -166,6 +168,8 @@ export default class EventsController {
         event_id: Number(event.id),
         status: 'draft' as const,
         type: ticket.type as TicketType,
+        sales_start_date: DateTime.fromISO(ticket.sales_start_date),
+        sales_end_date: DateTime.fromISO(ticket.sales_end_date),
       }))
     )
 
@@ -264,12 +268,20 @@ export default class EventsController {
 
     if (ticketData.id) {
       const ticketFound = await Ticket.findOrFail(ticketData.id)
-      await ticketFound.merge(ticketData).save()
+      await ticketFound
+        .merge({
+          ...ticketData,
+          sales_start_date: DateTime.fromISO(ticketData.sales_start_date),
+          sales_end_date: DateTime.fromISO(ticketData.sales_end_date),
+        })
+        .save()
       tickets.push(ticketFound)
     } else {
       const ticket = await Ticket.create({
         ...ticketData,
         event_id: Number(event.id),
+        sales_start_date: DateTime.fromISO(ticketData.sales_start_date),
+        sales_end_date: DateTime.fromISO(ticketData.sales_end_date),
       })
       tickets.push(ticket)
     }

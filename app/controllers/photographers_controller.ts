@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import { photographerProfileValidator, photographerSearchValidator } from '#validators/photographer'
+import { updatePhotographerProfileValidator } from '#validators/user'
 
 export default class PhotographersController {
   /**
@@ -81,7 +82,7 @@ export default class PhotographersController {
    * Update photographer profile
    */
   async updateProfile({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(photographerProfileValidator)
+    const payload = await request.validateUsing(updatePhotographerProfileValidator)
 
     if (auth.user?.role !== 'photographer') {
       return response.forbidden({
@@ -101,10 +102,7 @@ export default class PhotographersController {
         ...payload,
         preferences: {
           ...photographer.preferences,
-          equipment: payload.equipment,
-          specialties: payload.specialties,
-          hourly_rate: payload.hourly_rate,
-          availability: payload.availability,
+          ...payload.preferences,
         },
       })
       .save()
@@ -121,73 +119,12 @@ export default class PhotographersController {
    * Get photographer wallet
    */
   async getPhotographerWallet({ response, auth }: HttpContext) {
-    const photographer = await User.findOrFail(auth.user.id)
+    const photographer = await User.findOrFail(auth.user!.id)
     return response.json({
       success: true,
       data: photographer.wallet,
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
-  }
-
-  /**
-   * Request photographer withdrawal
-   */
-  async requestPhotographerWithdrawal({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(photographerWithdrawalValidator)
-  }
-
-  /**
-   * Get photographer transactions
-   */
-  async getPhotographerTransactions({ response, auth }: HttpContext) {
-    const photographer = await User.findOrFail(auth.user.id)
-    return response.json({
-      success: true,
-      data: photographer.transactions,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
-  }
-
-  /**
-   * Accept photographer job
-   */
-  async acceptPhotographerJob({ params, response, auth }: HttpContext) {
-    const job = await Job.findOrFail(params.id)
-  }
-
-  /**
-   * Upload photographer job photos
-   */
-  async uploadPhotographerJobPhotos({ params, request, response, auth }: HttpContext) {
-    const job = await Job.findOrFail(params.id)
-  }
-
-  /**
-   * Get photographer jobs
-   */
-  async getPhotographerJobs({ response, auth }: HttpContext) {
-    const photographer = await User.findOrFail(auth.user.id)
-    return response.json({
-      success: true,
-      data: photographer.jobs,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
-  }
-
-  /**
-   * Get photographer job
-   */
-  async getPhotographerJob({ params, response, auth }: HttpContext) {
-    const job = await Job.findOrFail(params.id)
-  }
-
-  /**
-   * Get photographer job photos
-   */
-  async getPhotographerJobPhotos({ params, response, auth }: HttpContext) {
-    const job = await Job.findOrFail(params.id)
   }
 }

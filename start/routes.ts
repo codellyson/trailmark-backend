@@ -1,7 +1,6 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 const MiscallenousController = () => import('#controllers/miscallenous_controller')
-const EventPhotographersController = () => import('#controllers/event_photographers_controller')
 const EventAddOnsController = () => import('#controllers/event_addons_controller')
 const AuthController = () => import('#controllers/auth_controller')
 const EventsController = () => import('#controllers/events_controller')
@@ -9,6 +8,10 @@ const PhotosController = () => import('#controllers/photos_controller')
 const BookingsController = () => import('#controllers/bookings_controller')
 const WebhooksController = () => import('#controllers/webhooks_controller')
 const PhotographersController = () => import('#controllers/photographers_controller')
+const WalletsController = () => import('#controllers/wallets_controller')
+const EventPaymentsController = () => import('#controllers/event_payments_controller')
+const EscrowController = () => import('#controllers/escrow_controller')
+const PhotographerJobsController = () => import('#controllers/photographer_jobs_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -159,17 +162,69 @@ router
       .group(() => {
         router.get('/profile', [PhotographersController, 'getPhotographerProfile'])
         router.put('/profile', [PhotographersController, 'updateProfile'])
-        router.get('/jobs', [PhotographersController, 'getPhotographerJobs'])
-        router.post('/jobs/:id/accept', [PhotographersController, 'acceptPhotographerJob'])
-        router.post('/jobs/:id/photos', [PhotographersController, 'uploadPhotographerJobPhotos'])
         router.get('/wallet', [PhotographersController, 'getPhotographerWallet'])
-        router.post('/withdrawal', [PhotographersController, 'requestPhotographerWithdrawal'])
-        router.get('/transactions', [PhotographersController, 'getPhotographerTransactions'])
       })
       .use(middleware.auth())
 
     // Public routes
     router.get('/', [PhotographersController, 'getPhotographers'])
-    // router.get('/:id', [PhotographersController, 'getPhotographer'])
+    router.get('/:id', [PhotographersController, 'getPhotographer'])
   })
   .prefix('/api/v1/photographers')
+
+// Wallet routes
+router
+  .group(() => {
+    // Common routes
+    router.get('/wallet', [WalletsController, 'getWallet'])
+    router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
+
+    // Photographer-specific routes
+    router
+      .group(() => {
+        router.post('/wallet/payout-request', [WalletsController, 'requestPhotographerPayout'])
+        router.get('/wallet/pending-events', [WalletsController, 'getPendingEvents'])
+        router.get('/wallet/earnings', [WalletsController, 'getPhotographerEarnings'])
+      })
+      .use(middleware.auth())
+
+    // Organizer-specific routes
+  })
+  .prefix('/api/v1')
+
+// Event payments routes or checkout
+router
+  .group(() => {
+    router.post('/events/:eventId/payments', [EventPaymentsController, 'processPayment'])
+    router.get('/events/payments/:id', [EventPaymentsController, 'getPayment'])
+  })
+  .prefix('/api/v1')
+
+// Escrow routes
+router
+  .group(() => {
+    router.post('/events/:eventId/escrow/release', [EscrowController, 'releaseToPhotographer'])
+    router.get('/events/:eventId/escrow', [EscrowController, 'getEventEscrow'])
+  })
+  .prefix('/api/v1')
+  .use(middleware.auth())
+
+// Photography Service API Endpoints
+router
+  .group(() => {
+    router.post('/addons/:addonId/photographer/respond', [
+      PhotographerJobsController,
+      'respondToJob',
+    ])
+    router.post('/addons/:addonId/photographer/complete', [
+      PhotographerJobsController,
+      'markServiceCompleted',
+    ])
+    router.get('/photographer/services', [PhotographerJobsController, 'getAssignedServices'])
+
+    // Payment API Endpoints
+    router.post('/events/payments', [EventPaymentsController, 'processPayment'])
+    router.get('/photographer/earnings', [WalletsController, 'getPhotographerEarnings'])
+  })
+  .prefix('/api/v1')
+  .use(middleware.auth())

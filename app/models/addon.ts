@@ -3,6 +3,7 @@ import { BaseModel, column, belongsTo, computed } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Event from './event.js'
 import User from './user.js'
+import EscrowAccount from './escrow_account.js'
 
 export type AddonType = 'photography' | 'equipment_rental' | 'transportation' | 'custom'
 export type AddonStatus = 'active' | 'inactive' | 'sold_out'
@@ -90,6 +91,9 @@ export default class Addon extends BaseModel {
   @belongsTo(() => Event)
   declare event: BelongsTo<typeof Event>
 
+  @belongsTo(() => EscrowAccount)
+  declare escrow: BelongsTo<typeof EscrowAccount>
+
   @belongsTo(() => User, { foreignKey: 'photographerId' })
   declare photographer: BelongsTo<typeof User>
 
@@ -107,7 +111,9 @@ export default class Addon extends BaseModel {
 
   @computed()
   get formatted_price() {
-    return `${this.currency_symbol}${this.price.toFixed(2)}`
+    // Convert price to number and handle potential null/undefined
+    const numericPrice = Number(this.price) || 0
+    return `${this.currency_symbol}${numericPrice.toFixed(2)}`
   }
 
   // Helper Methods
