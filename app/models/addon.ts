@@ -5,11 +5,13 @@ import {
   belongsTo,
   computed,
   SnakeCaseNamingStrategy,
+  hasMany,
 } from '@adonisjs/lucid/orm'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Event from './event.js'
 import User from './user.js'
 import EscrowAccount from './escrow_account.js'
+import PhotographyService from './photography_service.js'
 
 export type AddonType = 'photography' | 'equipment_rental' | 'transportation' | 'custom'
 export type AddonStatus = 'active' | 'inactive' | 'sold_out'
@@ -37,6 +39,9 @@ export default class Addon extends BaseModel {
 
   @column()
   declare event_id: number
+
+  @column()
+  declare escrow_account_id: number
 
   @column()
   declare name: string
@@ -96,14 +101,23 @@ export default class Addon extends BaseModel {
   declare updated_at: DateTime
 
   // Relationships
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+  })
   declare event: BelongsTo<typeof Event>
 
-  @belongsTo(() => EscrowAccount)
+  @belongsTo(() => EscrowAccount, {
+    foreignKey: 'escrow_account_id',
+  })
   declare escrow: BelongsTo<typeof EscrowAccount>
 
-  @belongsTo(() => User, { foreignKey: 'photographerId' })
+  @belongsTo(() => User, {
+    foreignKey: 'photographer_id',
+  })
   declare photographer: BelongsTo<typeof User>
+
+  @hasMany(() => PhotographyService)
+  declare services: HasMany<typeof PhotographyService>
 
   // Computed Properties
   @computed()

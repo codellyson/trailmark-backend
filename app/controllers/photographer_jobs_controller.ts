@@ -3,6 +3,7 @@ import Event from '#models/event'
 import Addon from '#models/addon'
 import EscrowAccount from '#models/escrow_account'
 import { DateTime } from 'luxon'
+import PhotographyService from '#models/photography_service'
 
 export default class PhotographerJobsController {
   /**
@@ -12,15 +13,13 @@ export default class PhotographerJobsController {
     const { status, message } = request.only(['status', 'message'])
 
     // Find the photography addon
-    const addon = await Addon.query()
-      .where('id', params.addonId)
-      .where('type', 'photography')
+    const addon = await PhotographyService.query()
+      .where('addon_id', params.addonId)
       .where('photographer_id', auth.user!.id)
       .preload('event')
       .firstOrFail()
 
-    // Verify addon is for photography and assigned to this photographer
-    if (addon.type !== 'photography' || addon.photographer_id !== auth.user!.id) {
+    if (addon.photographer_id !== auth.user!.id) {
       return response.forbidden({
         success: false,
         data: null,
@@ -33,28 +32,40 @@ export default class PhotographerJobsController {
 
     try {
       // Update addon status
-      if (status === 'accepted') {
-        addon.status = 'active'
-        // Create escrow for the photography service
-        await EscrowAccount.create({
-          event_id: addon.event_id,
-          photographer_id: auth.user!.id,
-          amount: addon.price,
-          status: 'held',
-          held_at: DateTime.now(),
-          release_date: addon.event.end_date,
-          metadata: {
-            addon_id: addon.id,
-            accepted_at: DateTime.now(),
-            photo_count: addon.photo_count,
-            message,
-          },
-        })
-      } else {
-        addon.status = 'inactive'
-        addon.photographer_id = null // Remove photographer assignment
-      }
+      switch (status) {
+        case 'accepted':
+          addon.status = 'accepted'
+          addon.accepted_at = DateTime.now()
 
+          await EscrowAccount.create({
+            event_id: addon.event_id,
+            photographer_id: addon.photographer_id,
+            amount: addon.price,
+            status: 'held',
+            held_at: DateTime.now(),
+            release_date: addon.event_date,
+            metadata: {
+              addon_id: addon.id,
+              accepted_at: DateTime.now(),
+              photo_count: addon.photo_count,
+              message,
+            },
+          })
+          break
+        case 'rejected':
+          addon.status = 'rejected'
+          break
+        case 'in_progress':
+          addon.status = 'in_progress'
+          break
+        case 'delivered':
+          addon.status = 'delivered'
+          addon.delivered_at = DateTime.now()
+          break
+        case 'cancelled':
+          addon.status = 'cancelled'
+          break
+      }
       await addon.save()
 
       return response.json({
@@ -84,11 +95,12 @@ export default class PhotographerJobsController {
   async markServiceCompleted({ params, auth, request, response }: HttpContext) {
     const { deliverables } = request.only(['deliverables'])
 
-    const addon = await Addon.query()
-      .where('id', params.addonId)
-      .where('type', 'photography')
+    console.log(deliverables)
+
+    const addon = await PhotographyService.query()
+      .where('addon_id', params.addonId)
       .where('photographer_id', auth.user!.id)
-      .where('status', 'active')
+      .where('status', 'delivered')
       .firstOrFail()
 
     try {
@@ -99,6 +111,7 @@ export default class PhotographerJobsController {
         ...escrow.metadata,
         completed_at: DateTime.now(),
         deliverables,
+        photo_count: deliverables.length,
       }
       await escrow.save()
 
@@ -130,11 +143,12 @@ export default class PhotographerJobsController {
   async getAssignedServices({ auth, request, response }: HttpContext) {
     const { status, page = 1, limit = 10 } = request.qs()
 
-    const query = Addon.query()
-      .where('type', 'photography')
+    const query = PhotographyService.query()
       .where('photographer_id', auth.user!.id)
-      .preload('event')
-      .preload('escrow')
+      .preload('event', (_query) => _query.preload('organizer'))
+      .preload('photographer')
+      .preload('addon')
+      // .preload('escrow')
       .orderBy('created_at', 'desc')
 
     if (status) {
@@ -145,7 +159,7 @@ export default class PhotographerJobsController {
 
     return response.json({
       success: true,
-      data: services,
+      data: services || [],
       error: null,
     })
   }

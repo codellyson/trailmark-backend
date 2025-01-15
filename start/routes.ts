@@ -60,18 +60,18 @@ router
   .prefix('/api/v1')
 
 // Event Add-on routes
-router
-  .group(() => {
-    router.post('/event-add-ons', [EventAddOnsController, 'addAddOnToEvent']).use(middleware.auth())
-    router.get('/event-add-ons/:eventId', [EventAddOnsController, 'getAddOnsForEvent'])
-    router
-      .put('/event-add-ons/:id', [EventAddOnsController, 'updateAddOnForEvent'])
-      .use(middleware.auth())
-    router
-      .delete('/event-add-ons/:id', [EventAddOnsController, 'removeAddOnFromEvent'])
-      .use(middleware.auth())
-  })
-  .prefix('/api/v1')
+// router
+//   .group(() => {
+//     router.post('/event-add-ons', [EventAddOnsController, 'addAddOnToEvent']).use(middleware.auth())
+//     router.get('/event-add-ons/:eventId', [EventAddOnsController, 'getAddOnsForEvent'])
+//     router
+//       .put('/event-add-ons/:id', [EventAddOnsController, 'updateAddOnForEvent'])
+//       .use(middleware.auth())
+//     router
+//       .delete('/event-add-ons/:id', [EventAddOnsController, 'removeAddOnFromEvent'])
+//       .use(middleware.auth())
+//   })
+//   .prefix('/api/v1')
 
 // // Event Photographers routes
 // router

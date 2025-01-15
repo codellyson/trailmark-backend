@@ -46,12 +46,25 @@ export default class Wallet extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
 
-  @belongsTo(() => User)
+  @belongsTo(() => User, {
+    foreignKey: 'user_id',
+  })
   declare user: BelongsTo<typeof User>
 
   @hasMany(() => WalletTransaction)
   declare transactions: HasMany<typeof WalletTransaction>
+  static async setupWallet(userId: number) {
+    const wallet = await Wallet.create({
+      user_id: userId,
+      available_balance: 0,
+      pending_balance: 0,
+      total_earnings: 0,
+      currency: 'NGN',
+      currency_symbol: '₦',
+    })
 
+    return wallet
+  }
   /**
    * Add a transaction and update balances
    */

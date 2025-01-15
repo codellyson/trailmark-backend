@@ -1,4 +1,5 @@
 import User from '#models/user'
+import Wallet from '#models/wallet'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 
@@ -38,6 +39,10 @@ export default class AuthController {
       }
       const token = await User.accessTokens.create(user)
 
+      if (user.role === 'photographer' && !user.wallet) {
+        await Wallet.setupWallet(user.id)
+      }
+
       return response.json({
         success: true,
         data: {
@@ -54,6 +59,7 @@ export default class AuthController {
         meta: { timestamp: new Date().toISOString() },
       })
     } catch (error) {
+      console.log(error)
       return response.badRequest({
         success: false,
         data: null,

@@ -2,10 +2,12 @@ import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { compose } from '@adonisjs/core/helpers'
 import hash from '@adonisjs/core/services/hash'
-import { BaseModel, column, SnakeCaseNamingStrategy, hasOne } from '@adonisjs/lucid/orm'
+import { BaseModel, column, SnakeCaseNamingStrategy, hasOne, hasMany } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
-import type { HasOne } from '@adonisjs/lucid/types/relations'
+import type { HasOne, HasMany } from '@adonisjs/lucid/types/relations'
 import Wallet from './wallet.js'
+import PhotographyService from './photography_service.js'
+import EscrowAccount from './escrow_account.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -74,8 +76,20 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime | null
+  declare updated_at: DateTime | null
 
-  @hasOne(() => Wallet)
+  @hasOne(() => Wallet, {
+    foreignKey: 'user_id',
+  })
   declare wallet: HasOne<typeof Wallet>
+
+  @hasMany(() => PhotographyService, {
+    foreignKey: 'photographer_id',
+  })
+  declare services: HasMany<typeof PhotographyService>
+
+  @hasMany(() => EscrowAccount, {
+    foreignKey: 'photographer_id',
+  })
+  declare escrow: HasMany<typeof EscrowAccount>
 }

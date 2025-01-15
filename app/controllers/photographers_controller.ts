@@ -69,7 +69,14 @@ export default class PhotographersController {
   }
 
   async getPhotographerProfile({ response, auth }: HttpContext) {
-    const photographer = await User.findOrFail(auth.user?.id)
+    const photographer = await User.query()
+      .where('id', auth.user!.id)
+      .where('role', 'photographer')
+      .preload('wallet')
+      .preload('services')
+      .preload('escrow')
+      .firstOrFail()
+
     return response.json({
       success: true,
       data: photographer,

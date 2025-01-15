@@ -1,5 +1,6 @@
 import Addon, { AddonStatus, AddonType } from '#models/addon'
 import Event from '#models/event'
+import PhotographyService from '#models/photography_service'
 import Ticket, { TicketStatus, TicketType } from '#models/ticket'
 import User from '#models/user'
 import { createEventValidator, updateEventValidator } from '#validators/event'
@@ -183,6 +184,7 @@ export default class EventsController {
 
   async createEventAddon({ request, response, auth }: HttpContext) {
     const payload = await request.validateUsing(createAddonValidator)
+    const eventId = request.params().eventId
 
     const addonsData = payload.add_ons.map((addon) => {
       const baseAddon = {
@@ -201,7 +203,7 @@ export default class EventsController {
           return {
             ...baseAddon,
             photo_count: addon.photo_count,
-            photographer_id: null, // Set to null for now until you have valid photographer IDs
+            photographer_id: addon.photographer_id, // Set to null for now until you have valid photographer IDs
             equipment_details: null,
             transportation_details: null,
           }
@@ -233,10 +235,27 @@ export default class EventsController {
     })
 
     const addons = await Addon.createMany(addonsData)
+    const event = await Event.findOrFail(eventId)
+
+    let photographyServices: PhotographyService[] = []
+    if (payload.add_ons.some((addon) => addon.type === 'photography')) {
+      const photographyAddons = addons.filter((addon) => addon.type === 'photography')
+      photographyServices = await PhotographyService.createMany(
+        photographyAddons.map((addon) => ({
+          event_id: Number(event.id),
+          addon_id: addon.id,
+          photographer_id: addon.photographer_id!,
+          price: addon.price,
+          photo_count: addon.photo_count!,
+
+          event_date: DateTime.fromISO(event.date as unknown as string),
+        }))
+      )
+    }
 
     return response.json({
       success: true,
-      data: addons,
+      data: { addons, photographyServices },
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
