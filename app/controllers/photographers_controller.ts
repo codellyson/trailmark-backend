@@ -74,7 +74,7 @@ export default class PhotographersController {
       .where('role', 'photographer')
       .preload('wallet')
       .preload('services')
-      .preload('escrow')
+      .preload('escrow', (query) => query.preload('event'))
       .firstOrFail()
 
     return response.json({

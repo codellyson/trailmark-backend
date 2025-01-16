@@ -1,8 +1,10 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Event from './event.js'
+
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class EscrowAccount extends BaseModel {
   @column({ isPrimary: true })
@@ -33,10 +35,25 @@ export default class EscrowAccount extends BaseModel {
   declare released_at: DateTime | null
 
   @column({
-    prepare: (value: any) => JSON.stringify(value),
-    consume: (value: any) => JSON.parse(value),
+    prepare: (value: Record<string, any>) => {
+      return typeof value === 'string' ? value : JSON.stringify(value)
+    },
+    consume: (value: string) => {
+      try {
+        return typeof value === 'string' ? JSON.parse(value) : value
+      } catch (error) {
+        return {}
+      }
+    },
   })
-  declare metadata: Record<string, any>
+  declare metadata: {
+    addon_id?: number
+    accepted_at?: string
+    completed_at?: string
+    message?: string
+    photo_count?: number
+    [key: string]: any
+  }
 
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
@@ -44,7 +61,9 @@ export default class EscrowAccount extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
 
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+  })
   declare event: BelongsTo<typeof Event>
 
   @belongsTo(() => User, {

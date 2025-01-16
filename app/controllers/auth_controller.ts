@@ -38,8 +38,9 @@ export default class AuthController {
         })
       }
       const token = await User.accessTokens.create(user)
+      const userWallet = await Wallet.findBy('user_id', user.id)
 
-      if (user.role === 'photographer' && !user.wallet) {
+      if (user.role === 'photographer' && !userWallet) {
         await Wallet.setupWallet(user.id)
       }
 

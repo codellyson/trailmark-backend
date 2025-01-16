@@ -85,6 +85,11 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @hasMany(() => PhotographyService, {
     foreignKey: 'photographer_id',
+    onQuery(query) {
+      query.preload('event', (_query) => _query.preload('organizer'))
+      query.preload('photographer')
+      query.preload('addon')
+    },
   })
   declare services: HasMany<typeof PhotographyService>
 

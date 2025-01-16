@@ -37,7 +37,7 @@ export default class PhotographerJobsController {
           addon.status = 'accepted'
           addon.accepted_at = DateTime.now()
 
-          await EscrowAccount.create({
+          const escrow = await EscrowAccount.create({
             event_id: addon.event_id,
             photographer_id: addon.photographer_id,
             amount: addon.price,
@@ -46,7 +46,7 @@ export default class PhotographerJobsController {
             release_date: addon.event_date,
             metadata: {
               addon_id: addon.id,
-              accepted_at: DateTime.now(),
+              accepted_at: DateTime.now().toISO(),
               photo_count: addon.photo_count,
               message,
             },
@@ -109,7 +109,7 @@ export default class PhotographerJobsController {
       escrow.status = 'released'
       escrow.metadata = {
         ...escrow.metadata,
-        completed_at: DateTime.now(),
+        completed_at: DateTime.now().toISO(),
         deliverables,
         photo_count: deliverables.length,
       }

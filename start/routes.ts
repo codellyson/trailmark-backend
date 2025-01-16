@@ -1,7 +1,6 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 const MiscallenousController = () => import('#controllers/miscallenous_controller')
-const EventAddOnsController = () => import('#controllers/event_addons_controller')
 const AuthController = () => import('#controllers/auth_controller')
 const EventsController = () => import('#controllers/events_controller')
 const PhotosController = () => import('#controllers/photos_controller')
