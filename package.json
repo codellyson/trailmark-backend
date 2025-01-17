@@ -60,6 +60,7 @@
     "@aws-sdk/s3-request-presigner": "^3.723.0",
     "@types/stripe": "^8.0.417",
     "@vinejs/vine": "^2.1.0",
+    "axios": "^1.7.9",
     "luxon": "^3.5.0",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",

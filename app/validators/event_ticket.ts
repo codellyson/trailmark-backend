@@ -25,9 +25,17 @@ export const createEventTicketValidator = vine.compile(
 // Update ticket validator
 export const updateEventTicketValidator = vine.compile(
   vine.object({
-    data: vine.object({
-      id: vine.number().optional(),
-      ...eventTicketSchema.getProperties(), // Remove .fields since it doesn't exist
-    }),
+    data: vine
+      .object({
+        id: vine.number(),
+        ...eventTicketSchema.getProperties(),
+      })
+      .optional(),
+  })
+)
+
+export const updateEventTicketStatusValidator = vine.compile(
+  vine.object({
+    status: vine.enum(['draft', 'active', 'sold_out', 'expired']),
   })
 )

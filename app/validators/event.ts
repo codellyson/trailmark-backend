@@ -24,7 +24,7 @@ export const updateEventValidator = vine.compile(
   vine.object({
     sales_start_date: vine.string().optional(),
     sales_deadline: vine.string().optional(),
-
+    status: vine.enum(['draft', 'cancelled', 'completed', 'published']).optional(),
     waiver: vine
       .object({
         enabled: vine.boolean().optional(),

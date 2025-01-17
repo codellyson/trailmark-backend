@@ -82,8 +82,23 @@ export default class Addon extends BaseModel {
 
   // Equipment specific fields
   @column({
-    prepare: (value: EquipmentDetails) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
+    prepare: (value: EquipmentDetails) => {
+      if (typeof value === 'string') {
+        return value
+      }
+      return JSON.stringify(value)
+    },
+    consume: (value: string) => {
+      if (!value) return {}
+      if (typeof value === 'object') {
+        return value
+      }
+      try {
+        return JSON.parse(value)
+      } catch (error) {
+        return {}
+      }
+    },
   })
   declare equipment_details: EquipmentDetails | null
 

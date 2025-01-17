@@ -11,6 +11,7 @@ const WalletsController = () => import('#controllers/wallets_controller')
 const EventPaymentsController = () => import('#controllers/event_payments_controller')
 const EscrowController = () => import('#controllers/escrow_controller')
 const PhotographerJobsController = () => import('#controllers/photographer_jobs_controller')
+const PaymentsController = () => import('#controllers/payments_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -54,6 +55,10 @@ router
 
     router
       .delete('/events/:eventId/tickets/:id', [EventsController, 'deleteEventTicket'])
+      .use(middleware.auth())
+
+    router
+      .put('/events/:eventId/tickets/:id/status', [EventsController, 'updateEventTicketStatus'])
       .use(middleware.auth())
   })
   .prefix('/api/v1')
@@ -130,11 +135,9 @@ router
 // Payment routes
 router
   .group(() => {
-    router
-      .post('/payments/create-intent', '#controllers/payments_controller.createIntent')
-      .use(middleware.auth())
-
-    router.post('/payments/webhook', '#controllers/payments_controller.webhook')
+    router.post('/payments/initialize', [PaymentsController, 'initializePayment'])
+    router.get('/payments/verify', [PaymentsController, 'verifyPayment'])
+    router.post('/payments/webhook', [PaymentsController, 'handleWebhook'])
   })
   .prefix('/api/v1')
 

@@ -5,7 +5,11 @@ import Ticket, { TicketStatus, TicketType } from '#models/ticket'
 import User from '#models/user'
 import { createEventValidator, updateEventValidator } from '#validators/event'
 import { createAddonValidator } from '#validators/event_add_on'
-import { createEventTicketValidator, updateEventTicketValidator } from '#validators/event_ticket'
+import {
+  createEventTicketValidator,
+  updateEventTicketStatusValidator,
+  updateEventTicketValidator,
+} from '#validators/event_ticket'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
@@ -285,7 +289,7 @@ export default class EventsController {
     const event = await Event.findOrFail(params.eventId)
     const tickets = []
 
-    if (ticketData.id) {
+    if (ticketData?.id) {
       const ticketFound = await Ticket.findOrFail(ticketData.id)
       await ticketFound
         .merge({
@@ -299,8 +303,8 @@ export default class EventsController {
       const ticket = await Ticket.create({
         ...ticketData,
         event_id: Number(event.id),
-        sales_start_date: DateTime.fromISO(ticketData.sales_start_date),
-        sales_end_date: DateTime.fromISO(ticketData.sales_end_date),
+        sales_start_date: DateTime.fromISO(ticketData?.sales_start_date as string),
+        sales_end_date: DateTime.fromISO(ticketData?.sales_end_date as string),
       })
       tickets.push(ticket)
     }
@@ -334,6 +338,20 @@ export default class EventsController {
     return response.json({
       success: true,
       data: null,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async updateEventTicketStatus({ request, response, auth }: HttpContext) {
+    const params = request.params()
+    const payload = await request.validateUsing(updateEventTicketStatusValidator)
+    const ticket = await Ticket.findOrFail(params.id)
+    await ticket.merge({ status: payload.status as TicketStatus }).save()
+
+    return response.json({
+      success: true,
+      data: ticket,
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
