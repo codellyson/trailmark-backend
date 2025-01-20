@@ -1,6 +1,7 @@
 import vine from '@vinejs/vine'
 
 export const addonSchema = vine.object({
+  id: vine.number().optional(),
   name: vine.string(),
   description: vine.string().optional(),
   type: vine.enum(['photography', 'equipment_rental', 'transportation', 'custom']),

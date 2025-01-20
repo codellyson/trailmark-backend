@@ -29,6 +29,7 @@ router
     router.get('/events', [EventsController, 'getEvents'])
     router.put('/events/:id', [EventsController, 'updateEvent']).use(middleware.auth())
     router.get('/events/:id', [EventsController, 'getEvent']).use(middleware.auth())
+    router.get('/events/public/:id', [EventsController, 'getPublicEvent'])
     router.post('/events', [EventsController, 'createEvent']).use(middleware.auth())
     router.delete('/events/:id', [EventsController, 'deleteEvent']).use(middleware.auth())
   })
@@ -152,7 +153,8 @@ router
 // Webhook routes
 router
   .group(() => {
-    router.post('/webhooks/squad', [WebhooksController, 'squadWebhook'])
+    //  payments/webhook/paystack
+    router.post('/payments/webhook/paystack', [WebhooksController, 'paystackWebhook'])
   })
   .prefix('/api/v1')
 

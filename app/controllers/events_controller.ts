@@ -102,6 +102,18 @@ export default class EventsController {
     })
   }
 
+  async getPublicEvent({ params, response }: HttpContext) {
+    const event = await Event.query().where('slug', params.id).firstOrFail()
+    await event?.load('organizer')
+    await event?.load('tickets_options')
+    await event?.load('addons')
+    return response.json({
+      success: true,
+      data: event,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
   /**
    * Update event details
    */

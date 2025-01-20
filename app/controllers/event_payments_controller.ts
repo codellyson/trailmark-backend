@@ -6,18 +6,53 @@ import Wallet from '#models/wallet'
 import EscrowAccount from '#models/escrow_account'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
+import vine from '@vinejs/vine'
+import { eventTicketSchema } from '#validators/event_ticket'
+import { addonSchema } from '#validators/event_add_on'
+import User from '#models/user'
+import { BADNAME } from 'dns/promises'
 
 export default class EventPaymentsController {
   /**
    * Process event ticket and addon payment
    */
+  private processPaymentValidator = vine.compile(
+    vine.object({
+      amount: vine.number(),
+      payment_method: vine.enum(['paystack', 'kora']),
+      metadata: vine.string(),
+      addons: vine
+        .array(
+          vine
+            .object({
+              quantity: vine.number(),
+              addon: addonSchema,
+            })
+            .optional()
+        )
+        .optional(),
+      tickets: vine
+        .array(
+          vine
+            .object({
+              quantity: vine.number(),
+              ticket: eventTicketSchema,
+            })
+            .optional()
+        )
+        .optional(),
+      user: vine.object({
+        first_name: vine.string(),
+        last_name: vine.string(),
+        email: vine.string(),
+        phone_number: vine.string(),
+      }),
+    })
+  )
+
   async processPayment({ request, auth, response }: HttpContext) {
-    const {
-      eventId,
-      amount,
-      paymentMethod,
-      addons = [], // Array of { addonId, quantity }
-    } = request.only(['eventId', 'amount', 'paymentMethod', 'addons'])
+    const payload = await this.processPaymentValidator.validate(request.all())
+    const eventId = request.param('eventId')
 
     const event = await Event.findOrFail(eventId)
 
@@ -29,38 +64,55 @@ export default class EventPaymentsController {
       let totalAddonCost = 0
       const addonDetails = []
 
-      for (const item of addons) {
-        const addon = await Addon.findOrFail(item.addonId)
+      for (const item of payload.addons || []) {
+        const addon = await Addon.findOrFail(item?.addon?.id)
 
         // Check addon availability
-        if (!(await addon.checkAvailability(item.quantity))) {
+        if (!(await addon.checkAvailability(item?.quantity || 0))) {
           throw new Error(`Addon ${addon.name} is not available in requested quantity`)
         }
 
         // Reserve the addon
-        await addon.reserve(item.quantity)
+        await addon.reserve(item?.quantity || 0)
 
-        totalAddonCost += addon.price * item.quantity
+        totalAddonCost += addon.price * (item?.quantity || 0)
         addonDetails.push({
           addon_id: addon.id,
           type: addon.type,
-          quantity: item.quantity,
+          quantity: item?.quantity || 0,
           unit_price: addon.price,
-          total: addon.price * item.quantity,
+          total: addon.price * (item?.quantity || 0),
           photographer_id: addon.photographer_id,
         })
       }
 
-      const totalAmount = amount + totalAddonCost
+      const totalAmount = payload.amount + totalAddonCost
+      let userId: number | null = null
+
+      if (payload.user) {
+        // Generate a random password for the new user
+        const password =
+          Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+
+        const user = await User.firstOrCreate(
+          { email: payload.user.email },
+          {
+            ...payload.user,
+            password, // Include the password field
+            role: 'user', // Explicitly set the role if needed
+          }
+        )
+        userId = user.id
+      }
 
       // Create payment record
       const payment = await EventPayment.create(
         {
-          customer_id: auth.user!.id,
+          customer_id: userId!,
           event_id: Number(event.id),
           amount: totalAmount,
           platform_fee: totalAmount * 0.1, // 10% platform fee
-          payment_method: paymentMethod,
+          payment_method: payload.payment_method,
           status: 'processing',
           metadata: {
             payment_initiated_at: new Date().toISOString(),
@@ -73,67 +125,6 @@ export default class EventPaymentsController {
       // Process payment through payment gateway
       // const paymentResult = await processPaymentGateway(...)
 
-      // Handle photographer fees and escrow for photography addons
-      for (const detail of addonDetails) {
-        if (detail.type === 'photography' && detail.photographer_id) {
-          const photographerFee = detail.total
-
-          // Create escrow for photographer payment
-          await EscrowAccount.create(
-            {
-              event_id: Number(event.id),
-              photographer_id: detail.photographer_id,
-              amount: photographerFee,
-              status: 'held',
-              held_at: DateTime.now(),
-              release_date: event.end_date,
-              metadata: {
-                payment_id: payment.id,
-                addon_id: detail.addon_id,
-                customer_id: auth.user!.id,
-                completed_at: DateTime.now(),
-                deliverables: [],
-              },
-            },
-            { client: trx }
-          )
-
-          // Confirm addon sale
-          const addon = await Addon.findOrFail(detail.addon_id)
-          await addon.confirmSale(detail.quantity)
-        }
-      }
-
-      // Update organizer's wallet
-      const organizerShare = totalAmount - totalAmount * 0.1 // Minus platform fee
-      const organizerWallet = await Wallet.firstOrCreate(
-        { user_id: event.organizer_id },
-        {
-          user_id: event.organizer_id,
-          available_balance: 0,
-          pending_balance: 0,
-        }
-      )
-
-      await organizerWallet.addTransaction({
-        type: 'ticket_sale_revenue',
-        amount: organizerShare,
-        status: 'completed',
-        reference_type: 'event_payment',
-        reference_id: payment.id,
-        metadata: {
-          event_id: Number(event.id),
-          customer_id: auth.user!.id,
-          platform_fee: totalAmount * 0.1,
-          addons: addonDetails,
-        },
-      })
-
-      // Update payment status
-      payment.status = 'completed'
-      payment.paid_at = new Date()
-      await payment.save()
-
       // Commit transaction
       await trx.commit()
 
@@ -142,23 +133,28 @@ export default class EventPaymentsController {
         data: {
           payment,
           addons: addonDetails,
-          ticketConfirmation: {
-            eventId: event.id,
-            amount: totalAmount,
-            paymentId: payment.id,
+          metadata: {
+            event_id: Number(event.id),
+            customer_id: userId!,
+            platform_fee: totalAmount * 0.1,
+            addons: addonDetails,
+            tickets: payload.tickets,
+          },
+          meta: {
             timestamp: new Date().toISOString(),
           },
         },
         error: null,
       })
     } catch (error) {
+      console.log(error)
       // Rollback transaction
       await trx.rollback()
 
       // Cancel addon reservations
-      for (const item of addons) {
-        const addon = await Addon.findOrFail(item.addonId)
-        await addon.cancelReservation(item.quantity)
+      for (const item of payload.addons || []) {
+        const addon = await Addon.findOrFail(item?.addon?.id)
+        await addon.cancelReservation(item?.quantity || 0)
       }
 
       return response.internalServerError({
