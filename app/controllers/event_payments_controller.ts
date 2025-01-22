@@ -10,16 +10,18 @@ import vine from '@vinejs/vine'
 import { eventTicketSchema } from '#validators/event_ticket'
 import { addonSchema } from '#validators/event_add_on'
 import User from '#models/user'
-import { BADNAME } from 'dns/promises'
 
 export default class EventPaymentsController {
+  private generatePaymentReference() {
+    return `PAY-${Math.random().toString(36).substring(2, 15)}`
+  }
   /**
    * Process event ticket and addon payment
    */
   private processPaymentValidator = vine.compile(
     vine.object({
       amount: vine.number(),
-      payment_method: vine.enum(['paystack', 'kora']),
+      payment_method: vine.enum(['card', 'link']),
       metadata: vine.string(),
       addons: vine
         .array(
@@ -47,13 +49,14 @@ export default class EventPaymentsController {
         email: vine.string(),
         phone_number: vine.string(),
       }),
+      payment_reference: vine.string(),
     })
   )
 
   async processPayment({ request, auth, response }: HttpContext) {
     const payload = await this.processPaymentValidator.validate(request.all())
     const eventId = request.param('eventId')
-
+    const paymentReference = payload.payment_reference
     const event = await Event.findOrFail(eventId)
 
     // Start transaction
@@ -62,7 +65,7 @@ export default class EventPaymentsController {
     try {
       // Calculate addon costs and validate availability
       let totalAddonCost = 0
-      const addonDetails = []
+      const addonDetails: any[] = []
 
       for (const item of payload.addons || []) {
         const addon = await Addon.findOrFail(item?.addon?.id)
@@ -75,18 +78,20 @@ export default class EventPaymentsController {
         // Reserve the addon
         await addon.reserve(item?.quantity || 0)
 
-        totalAddonCost += addon.price * (item?.quantity || 0)
+        // Don't add to totalAmount since it's already included in payload.amount
         addonDetails.push({
           addon_id: addon.id,
+          name: addon.name,
           type: addon.type,
           quantity: item?.quantity || 0,
-          unit_price: addon.price,
+          price: addon.price,
           total: addon.price * (item?.quantity || 0),
           photographer_id: addon.photographer_id,
         })
       }
 
-      const totalAmount = payload.amount + totalAddonCost
+      // Use payload.amount directly since it already includes both ticket and addon costs
+      const totalAmount = payload.amount
       let userId: number | null = null
 
       if (payload.user) {
@@ -106,24 +111,25 @@ export default class EventPaymentsController {
       }
 
       // Create payment record
-      const payment = await EventPayment.create(
+      const payment = await EventPayment.addToDatabase(
         {
           customer_id: userId!,
           event_id: Number(event.id),
           amount: totalAmount,
           platform_fee: totalAmount * 0.1, // 10% platform fee
           payment_method: payload.payment_method,
-          status: 'processing',
+          status: 'pending',
+          currency: 'NGN',
+          payment_reference: paymentReference,
           metadata: {
-            payment_initiated_at: new Date().toISOString(),
+            payment_initiated_at: DateTime.now().toISO(),
             addons: addonDetails,
+            tickets: payload.tickets || [],
+            customer_info: payload.user,
           },
         },
-        { client: trx }
+        trx
       )
-
-      // Process payment through payment gateway
-      // const paymentResult = await processPaymentGateway(...)
 
       // Commit transaction
       await trx.commit()
@@ -133,6 +139,7 @@ export default class EventPaymentsController {
         data: {
           payment,
           addons: addonDetails,
+          reference: paymentReference,
           metadata: {
             event_id: Number(event.id),
             customer_id: userId!,
@@ -141,7 +148,7 @@ export default class EventPaymentsController {
             tickets: payload.tickets,
           },
           meta: {
-            timestamp: new Date().toISOString(),
+            timestamp: DateTime.now().toISO(),
           },
         },
         error: null,
@@ -156,7 +163,7 @@ export default class EventPaymentsController {
         const addon = await Addon.findOrFail(item?.addon?.id)
         await addon.cancelReservation(item?.quantity || 0)
       }
-
+      console.log(error)
       return response.internalServerError({
         success: false,
         data: null,
@@ -182,6 +189,20 @@ export default class EventPaymentsController {
     return response.json({
       success: true,
       data: payment,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async getEventPayments({ params, auth, response }: HttpContext) {
+    const payments = await EventPayment.query()
+      .where('event_id', params.eventId)
+      .preload('event')
+      .firstOrFail()
+
+    return response.json({
+      success: true,
+      data: payments,
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })

@@ -1,0 +1,62 @@
+@layout.base()
+  @slot('meta')
+    <meta name="description" content="A welcome page made with EdgeJS" />
+  @endslot
+  @slot('main')
+    <h2>
+      Photography Service Completed
+    </h2>
+    <p>
+      Dear {{ organizer.first_name }},
+    </p>
+
+    <p>
+      The photography service for your event has been completed.
+    </p>
+
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
+      <h3>
+        Service Details:
+      </h3>
+      <p>
+        Event: {{ event.name }}
+      </p>
+      <p>
+        Date: {{ event.start_date.toFormat('dd LLL yyyy') }}
+      </p>
+      <p>
+        Photographer: {{ photographer.first_name }} {{ photographer.last_name }}
+      </p>
+      <p>
+        Package: {{ addon.name }}
+      </p>
+    </div>
+
+    <p>
+      Please review the service and release the payment from escrow if you're satisfied with the work.
+    </p>
+
+    <div style="margin: 20px 0;">
+      <h3>
+        Next Steps:
+      </h3>
+      <ol>
+        <li>
+          Review the photography service
+        </li>
+        <li>
+          Release payment from escrow
+        </li>
+        <li>
+          Rate the photographer's service
+        </li>
+      </ol>
+    </div>
+
+    <a href="{{ reviewUrl }}" class="button">Review & Release Payment</a>
+
+    <p style="margin-top: 20px;">
+      If you have any concerns, please contact our support team within 7 days.
+    </p>
+  @endslot
+@end

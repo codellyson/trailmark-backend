@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
+import { BaseModel, column, belongsTo, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Event from './event.js'
@@ -31,24 +31,26 @@ export type PaymentDetails = {
 }
 
 export type AttendeeDetails = {
-  full_name: string
+  first_name: string
+  last_name: string
   email: string
-  phone?: string
+  phone_number: string
   additional_info?: Record<string, any>
 }
 
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 export default class Booking extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
 
   @column()
-  declare userId: number
+  declare user_id: number
 
   @column()
-  declare eventId: number
+  declare event_id: number
 
   @column()
-  declare bookingReference: string
+  declare booking_reference: string
 
   @column()
   declare status: BookingStatus
@@ -66,7 +68,7 @@ export default class Booking extends BaseModel {
   declare selected_addons: SelectedAddon[]
 
   @column()
-  declare totalAmount: number
+  declare total_amount: number
 
   @column()
   declare currency: string
@@ -99,19 +101,23 @@ export default class Booking extends BaseModel {
   declare checked_in_at: DateTime | null
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
+  declare updated_at: DateTime
 
   @column.dateTime()
-  declare cancelledAt: DateTime | null
+  declare cancelled_at: DateTime | null
 
   // Relationships
-  @belongsTo(() => User)
+  @belongsTo(() => User, {
+    foreignKey: 'user_id',
+  })
   declare user: BelongsTo<typeof User>
 
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+  })
   declare event: BelongsTo<typeof Event>
 
   // Helper methods
@@ -125,7 +131,7 @@ export default class Booking extends BaseModel {
 
   public async cancel(): Promise<void> {
     this.status = 'cancelled'
-    this.cancelledAt = DateTime.now()
+    this.cancelled_at = DateTime.now()
     await this.save()
   }
 

@@ -3,6 +3,7 @@ import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import WalletTransaction from './wallet_transaction.js'
+import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 export default class Wallet extends BaseModel {
   @column({ isPrimary: true })
@@ -51,7 +52,9 @@ export default class Wallet extends BaseModel {
   })
   declare user: BelongsTo<typeof User>
 
-  @hasMany(() => WalletTransaction)
+  @hasMany(() => WalletTransaction, {
+    foreignKey: 'wallet_id',
+  })
   declare transactions: HasMany<typeof WalletTransaction>
   static async setupWallet(userId: number) {
     const wallet = await Wallet.create({
@@ -68,12 +71,16 @@ export default class Wallet extends BaseModel {
   /**
    * Add a transaction and update balances
    */
-  async addTransaction(data: Partial<WalletTransaction>) {
+  async addTransaction(data: Partial<WalletTransaction>, client?: TransactionClientContract) {
     const transaction = await WalletTransaction.create({
       ...data,
       wallet_id: this.id,
       balance_after: this.available_balance + (data.amount || 0),
     })
+
+    if (client) {
+      await client.commit()
+    }
 
     // Update wallet balance based on transaction type and status
     if (transaction.status === 'completed') {

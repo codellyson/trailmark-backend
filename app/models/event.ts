@@ -17,6 +17,7 @@ export default class Event extends BaseModel {
   declare organizer_id: number
   @belongsTo(() => User, {
     foreignKey: 'organizer_id',
+    localKey: 'id',
   })
   declare organizer: BelongsTo<typeof User>
   @column()
@@ -154,4 +155,5 @@ export default class Event extends BaseModel {
     foreignKey: 'event_id',
   })
   declare payments: HasMany<typeof EventPayment>
+  name: any
 }

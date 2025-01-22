@@ -12,6 +12,7 @@ const EventPaymentsController = () => import('#controllers/event_payments_contro
 const EscrowController = () => import('#controllers/escrow_controller')
 const PhotographerJobsController = () => import('#controllers/photographer_jobs_controller')
 const PaymentsController = () => import('#controllers/payments_controller')
+const StatsController = () => import('#controllers/stats_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -133,14 +134,14 @@ router
 
   .prefix('/api/v1')
 
-// Payment routes
-router
-  .group(() => {
-    router.post('/payments/initialize', [PaymentsController, 'initializePayment'])
-    router.get('/payments/verify', [PaymentsController, 'verifyPayment'])
-    router.post('/payments/webhook', [PaymentsController, 'handleWebhook'])
-  })
-  .prefix('/api/v1')
+// // Payment routes
+// router
+//   .group(() => {
+//     router.post('/payments/initialize', [PaymentsController, 'initializePayment'])
+//     router.get('/payments/verify', [PaymentsController, 'verifyPayment'])
+//     router.post('/payments/webhook', [PaymentsController, 'handleWebhook'])
+//   })
+//   .prefix('/api/v1')
 
 // Miscallenous routes
 router
@@ -229,6 +230,13 @@ router
     // Payment API Endpoints
     router.post('/events/payments', [EventPaymentsController, 'processPayment'])
     router.get('/photographer/earnings', [WalletsController, 'getPhotographerEarnings'])
+  })
+  .prefix('/api/v1')
+  .use(middleware.auth())
+
+router
+  .group(() => {
+    router.get('/analytics/organizer', [StatsController, 'getDashboardStats'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())

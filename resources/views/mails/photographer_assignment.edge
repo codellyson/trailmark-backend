@@ -1,0 +1,63 @@
+@layout.base()
+  @slot('meta')
+    <meta name="description" content="A welcome page made with EdgeJS" />
+  @endslot
+  @slot('main')
+    <h2>
+      New Photography Assignment
+    </h2>
+    <p>
+      Dear {{ photographer.first_name }},
+    </p>
+
+    <p>
+      You have been assigned to photograph an upcoming event.
+    </p>
+
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
+      <h3>
+        Event Details:
+      </h3>
+      <p>
+        Event Name: {{ event.name }}
+      </p>
+      <p>
+        Date: {{ event.start_date.toFormat('dd LLL yyyy') }}
+      </p>
+      <p>
+        Time: {{ event.start_time }}
+      </p>
+      <p>
+        Venue: {{ event.venue }}
+      </p>
+      <p>
+        Expected Duration: {{ event.duration }}
+      </p>
+    </div>
+
+    <div style="margin: 20px 0;">
+      <h3>
+        Photography Package Details:
+      </h3>
+      <p>
+        Package: {{ addon.name }}
+      </p>
+      <p>
+        Required Photos: {{ addon.photo_count }}
+      </p>
+      <p>
+        Payment: {{ addon.getFormattedPrice() }}
+      </p>
+    </div>
+
+    <p>
+      Please confirm your availability by clicking the button below:
+    </p>
+
+    <a href="{{ confirmationUrl }}" class="button">Confirm Assignment</a>
+
+    <p style="margin-top: 20px;">
+      If you cannot make it, please let us know as soon as possible.
+    </p>
+  @endslot
+@end

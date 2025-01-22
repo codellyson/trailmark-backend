@@ -1,0 +1,101 @@
+@layout.base()
+  @slot('meta')
+    <meta name="description" content="A welcome page made with EdgeJS" />
+  @endslot
+  @slot('main')
+    <div class="container">
+      <div class="header">
+        <h2 style="margin: 0;">
+          Payment Confirmation
+        </h2>
+      </div>
+
+      <div class="content">
+        <p>
+          Dear {{ user.first_name }},
+        </p>
+
+        <p>
+          Your payment for {{ event.title }} has been successfully processed.
+        </p>
+
+        <div class="details-box">
+          <h3>
+            Payment Details
+          </h3>
+          <div class="details-item">
+            <span class="details-label">Amount:</span>
+            <span>{{ payment.currency }} {{ payment.amount.toLocaleString() }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Reference:</span>
+            <span>{{ payment.payment_reference }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Date:</span>
+            <span>{{ payment.paid_at?.toFormat('dd LLL yyyy') }}</span>
+          </div>
+        </div>
+
+        <div class="details-box">
+          <h3>
+            Event Details
+          </h3>
+          <div class="details-item">
+            <span class="details-label">Event:</span>
+            <span>{{ event.title }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Date:</span>
+            <span>{{ event.date?.toFormat('dd LLL yyyy') }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Venue:</span>
+            <span>{{ event.location }}</span>
+          </div>
+        </div>
+
+        @if(payment.metadata?.tickets?.length)
+          <div class="details-box">
+            <h3>
+              Tickets
+            </h3>
+            @each(ticketData in payment.metadata.tickets)
+              <div class="details-item">
+                <span class="details-label">{{ ticketData.ticket.name }}:</span>
+                <span>{{ ticketData.quantity }}x</span>
+              </div>
+            @end
+          </div>
+        @endif
+        
+        @if(payment.metadata?.addons?.length)
+          <div class="details-box">
+            <h3>
+              Add-ons
+            </h3>
+            @each(addon in payment.metadata.addons)
+              <div class="details-item">
+                <span class="details-label">{{ addon.name }}:</span>
+                <span>{{ addon.quantity }}x</span>
+              </div>
+            @end
+          </div>
+        @endif
+        
+        <div style="text-align: center;">
+          <a href="{{ bookingUrl }}" class="button">View Booking Details</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>
+          © {{ new Date().getFullYear() }} Trailmark. All rights reserved.
+        </p>
+        <p>
+          If you have any questions, please contact our support team.
+        </p>
+      </div>
+    </div>
+  @endslot
+@end

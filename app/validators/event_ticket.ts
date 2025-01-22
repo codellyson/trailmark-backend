@@ -2,6 +2,7 @@ import vine from '@vinejs/vine'
 
 // Base ticket schema
 export const eventTicketSchema = vine.object({
+  id: vine.number().optional(),
   name: vine.string(),
   description: vine.string().optional(),
   type: vine.enum(['general', 'vip', 'early_bird']),
@@ -27,7 +28,6 @@ export const updateEventTicketValidator = vine.compile(
   vine.object({
     data: vine
       .object({
-        id: vine.number(),
         ...eventTicketSchema.getProperties(),
       })
       .optional(),

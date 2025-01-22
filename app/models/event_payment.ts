@@ -1,8 +1,12 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Event from './event.js'
+import Ticket from './ticket.js'
+import Addon from './addon.js'
+
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class EventPayment extends BaseModel {
   @column({ isPrimary: true })
@@ -47,32 +51,37 @@ export default class EventPayment extends BaseModel {
     refund_reason?: string
     gateway_response?: Record<string, any>
     customer_info?: {
-      name?: string
+      first_name?: string
+      last_name?: string
       email?: string
-      phone?: string
+      phone_number?: string
     }
-    [key: string]: any
+    tickets?: Ticket[]
+    addons?: Addon[]
   }
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
+  declare updated_at: DateTime
 
   @column.dateTime()
-  declare paidAt: DateTime | null
+  declare paid_at: DateTime | null
 
   @column.dateTime()
-  declare refundedAt: DateTime | null
+  declare refunded_at: DateTime | null
 
   @belongsTo(() => User, {
     foreignKey: 'customer_id',
   })
   declare customer: BelongsTo<typeof User>
 
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+  })
   declare event: BelongsTo<typeof Event>
+  booking_id: any
 
   /**
    * Get formatted amount with currency
@@ -100,13 +109,13 @@ export default class EventPayment extends BaseModel {
    * Check if payment is refundable
    */
   isRefundable(): boolean {
-    if (!this.paidAt) return false
+    if (!this.paid_at) return false
 
-    const daysSincePayment = DateTime.now().diff(this.paidAt, 'days').days
+    const daysSincePayment = DateTime.now().diff(this.paid_at, 'days').days
     return (
       this.status === 'completed' &&
       daysSincePayment <= 30 && // 30-day refund window
-      !this.refundedAt
+      !this.refunded_at
     )
   }
 
@@ -120,12 +129,12 @@ export default class EventPayment extends BaseModel {
 
     // Update payment status
     this.status = 'refunded'
-    this.refundedAt = DateTime.now()
+    this.refunded_at = DateTime.now()
     this.metadata = {
       ...this.metadata,
       refund_reason: reason,
       refunded_at: DateTime.now().toISO(),
-    }
+    } as any
 
     await this.save()
 
@@ -133,5 +142,10 @@ export default class EventPayment extends BaseModel {
     // await refundPaymentGateway(this.paymentReference)
 
     return this
+  }
+
+  static async addToDatabase(data: any, trx: any) {
+    const payment = await EventPayment.create(data, { client: trx })
+    return payment
   }
 }

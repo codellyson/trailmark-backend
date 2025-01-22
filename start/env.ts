@@ -38,5 +38,21 @@ export default await Env.create(new URL('../', import.meta.url), {
   R2_KEY: Env.schema.string(),
   R2_SECRET: Env.schema.string(),
   R2_BUCKET: Env.schema.string(),
-  R2_ENDPOINT: Env.schema.string()
+  R2_ENDPOINT: Env.schema.string(),
+  PAYSTACK_WEBHOOK_SECRET: Env.schema.string(),
+  APP_URL: Env.schema.string(),
+  PAYSTACK_SECRET_KEY: Env.schema.string(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring the mail package
+  |----------------------------------------------------------
+  */
+  BREVO_API_KEY: Env.schema.string(),
+  SMTP_HOST: Env.schema.string(),
+  SMTP_PORT: Env.schema.number(),
+  SMTP_USERNAME: Env.schema.string(),
+  SMTP_PASSWORD: Env.schema.string(),
+  MAIL_FROM_ADDRESS: Env.schema.string(),
+  MAIL_FROM_NAME: Env.schema.string(),
 })

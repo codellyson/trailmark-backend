@@ -1,0 +1,38 @@
+@layout('mails/base_layout')
+
+  @section('body')
+    <h2>
+      Payment Released from Escrow
+    </h2>
+    <p>
+      Dear {{ photographer.first_name }},
+    </p>
+
+    <p>
+      The payment for your photography services has been released from escrow.
+    </p>
+
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
+      <h3>
+        Payment Details:
+      </h3>
+      <p>
+        Amount: {{ escrow.getFormattedAmount() }}
+      </p>
+      <p>
+        Event: {{ event.name }}
+      </p>
+      <p>
+        Date of Service: {{ event.start_date.toFormat('dd LLL yyyy') }}
+      </p>
+      <p>
+        Release Date: {{ escrow.release_date.toFormat('dd LLL yyyy') }}
+      </p>
+    </div>
+
+    <p>
+      The funds have been transferred to your wallet and are now available for withdrawal.
+    </p>
+
+    <a href="{{ walletUrl }}" class="button">View Wallet</a>
+  @end

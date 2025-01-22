@@ -3,8 +3,13 @@ import EscrowAccount from '#models/escrow_account'
 import Wallet from '#models/wallet'
 import Event from '#models/event'
 import { DateTime } from 'luxon'
+import EmailService from '#services/email_service'
+import User from '#models/user'
+import Addon from '#models/addon'
 
 export default class EscrowController {
+  constructor(private emailService: EmailService) {}
+
   /**
    * Release funds to photographer after event completion
    */
@@ -64,6 +69,11 @@ export default class EscrowController {
       escrow.status = 'released'
       escrow.released_at = DateTime.now()
       await escrow.save()
+      const photographer = await User.findOrFail(escrow.photographer_id)
+      const addon = await Addon.findOrFail(escrow.event_id)
+
+      await this.emailService.sendEscrowRelease(escrow)
+      await this.emailService.sendPhotographyCompletion(event, photographer, addon)
 
       return response.json({
         success: true,

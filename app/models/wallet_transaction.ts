@@ -69,19 +69,21 @@ export default class WalletTransaction extends BaseModel {
   }
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
+  declare updated_at: DateTime
 
   @column.dateTime()
   declare processed_at: DateTime | null
 
-  @belongsTo(() => Wallet)
+  @belongsTo(() => Wallet, {
+    foreignKey: 'wallet_id',
+  })
   declare wallet: BelongsTo<typeof Wallet>
 
   @belongsTo(() => Event, {
-    foreignKey: 'referenceId',
+    foreignKey: 'reference_id',
     onQuery: (query) => {
       query.where('reference_type', 'event')
     },
@@ -89,9 +91,9 @@ export default class WalletTransaction extends BaseModel {
   declare event: BelongsTo<typeof Event>
 
   @belongsTo(() => User, {
-    foreignKey: 'userId',
+    foreignKey: 'metadata.initiated_by',
   })
-  declare initiatedBy: BelongsTo<typeof User>
+  declare initiated_by: BelongsTo<typeof User>
 
   /**
    * Get formatted amount with currency symbol
@@ -107,19 +109,19 @@ export default class WalletTransaction extends BaseModel {
   getDescription(): string {
     switch (this.type) {
       case 'event_payment_received':
-        return `Payment received for event #${this.metadata.eventId}`
+        return `Payment received for event #${this.metadata.event_id}`
       case 'ticket_sale_revenue':
-        return `Ticket sale revenue for event #${this.metadata.eventId}`
+        return `Ticket sale revenue for event #${this.metadata.event_id}`
       case 'photographer_fee':
-        return `Photographer fee for event #${this.metadata.eventId}`
+        return `Photographer fee for event #${this.metadata.event_id}`
       case 'platform_fee':
         return 'Platform fee'
       case 'payout_request':
-        return `Payout request via ${this.metadata.payoutMethod}`
+        return `Payout request via ${this.metadata.payout_method}`
       case 'withdrawal':
         return 'Withdrawal to bank account'
       case 'refund_issued':
-        return `Refund issued for event #${this.metadata.eventId}`
+        return `Refund issued for event #${this.metadata.event_id}`
       case 'adjustment':
         return this.metadata.reason || 'Manual adjustment'
       default:
@@ -135,7 +137,7 @@ export default class WalletTransaction extends BaseModel {
     return (
       reversibleTypes.includes(this.type) &&
       this.status === 'completed' &&
-      DateTime.now().diff(this.createdAt, 'days').days < 30
+      DateTime.now().diff(this.created_at, 'days').days < 30
     )
   }
 

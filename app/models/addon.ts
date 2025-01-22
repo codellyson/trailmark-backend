@@ -133,6 +133,7 @@ export default class Addon extends BaseModel {
 
   @hasMany(() => PhotographyService)
   declare services: HasMany<typeof PhotographyService>
+  quantity: number
 
   // Computed Properties
   @computed()
