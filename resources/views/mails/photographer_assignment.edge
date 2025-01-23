@@ -1,63 +1,100 @@
 @layout.base()
   @slot('meta')
-    <meta name="description" content="A welcome page made with EdgeJS" />
+    <meta name="description" content="New Photography Assignment" />
   @endslot
   @slot('main')
-    <h2>
-      New Photography Assignment
-    </h2>
-    <p>
-      Dear {{ photographer.first_name }},
-    </p>
+    <div
+      style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+    >
+      <div
+        style="background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;"
+      >
+        <h2 style="margin: 0; font-size: 24px;">
+          New Photography Assignment
+        </h2>
+      </div>
 
-    <p>
-      You have been assigned to photograph an upcoming event.
-    </p>
+      <div style="padding: 30px; background: white;">
+        <p style="margin-bottom: 20px;">
+          Dear {{ photographer.first_name }},
+        </p>
 
-    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
-      <h3>
-        Event Details:
-      </h3>
-      <p>
-        Event Name: {{ event.name }}
-      </p>
-      <p>
-        Date: {{ event.start_date.toFormat('dd LLL yyyy') }}
-      </p>
-      <p>
-        Time: {{ event.start_time }}
-      </p>
-      <p>
-        Venue: {{ event.venue }}
-      </p>
-      <p>
-        Expected Duration: {{ event.duration }}
-      </p>
+        <p style="margin-bottom: 20px;">
+          You have been assigned to photograph an upcoming event.
+        </p>
+
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #333;">
+            Event Details
+          </h3>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Event Name:</span>
+            <span>{{ event.name }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Date:</span>
+            <span>{{ event.start_date.toFormat('dd LLL yyyy') }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Time:</span>
+            <span>{{ event.start_time }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Venue:</span>
+            <span>{{ event.venue }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Expected Duration:</span>
+            <span>{{ event.duration }}</span>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #333;">
+            Photography Package Details
+          </h3>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Package:</span>
+            <span>{{ addon.name }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Required Photos:</span>
+            <span>{{ addon.photo_count }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+            <span style="color: #666;">Payment:</span>
+            <span>{{ addon.getFormattedPrice() }}</span>
+          </div>
+        </div>
+
+        <p style="margin: 20px 0;">
+          Please confirm your availability by clicking the button below:
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a
+            href="{{ confirmationUrl }}"
+            style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;"
+          >
+            Confirm Assignment
+          </a>
+        </div>
+
+        <p style="margin-top: 20px; color: #666;">
+          If you cannot make it, please let us know as soon as possible.
+        </p>
+      </div>
+
+      <div
+        style="text-align: center; padding: 20px; color: #666; font-size: 14px; border-top: 1px solid #eee;"
+      >
+        <p style="margin: 5px 0;">
+          © {{ new Date().getFullYear() }} Trailmark. All rights reserved.
+        </p>
+        <p style="margin: 5px 0;">
+          If you have any questions, please contact our support team.
+        </p>
+      </div>
     </div>
-
-    <div style="margin: 20px 0;">
-      <h3>
-        Photography Package Details:
-      </h3>
-      <p>
-        Package: {{ addon.name }}
-      </p>
-      <p>
-        Required Photos: {{ addon.photo_count }}
-      </p>
-      <p>
-        Payment: {{ addon.getFormattedPrice() }}
-      </p>
-    </div>
-
-    <p>
-      Please confirm your availability by clicking the button below:
-    </p>
-
-    <a href="{{ confirmationUrl }}" class="button">Confirm Assignment</a>
-
-    <p style="margin-top: 20px;">
-      If you cannot make it, please let us know as soon as possible.
-    </p>
   @endslot
 @end

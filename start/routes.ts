@@ -33,6 +33,9 @@ router
     router.get('/events/public/:id', [EventsController, 'getPublicEvent'])
     router.post('/events', [EventsController, 'createEvent']).use(middleware.auth())
     router.delete('/events/:id', [EventsController, 'deleteEvent']).use(middleware.auth())
+    router
+      .get('/generate-apple-ticket-pass/:bookingId', [EventsController, 'generateAppleTicketPass'])
+      .use(middleware.auth())
   })
   .prefix('/api/v1')
 
@@ -65,54 +68,26 @@ router
   })
   .prefix('/api/v1')
 
-// Event Add-on routes
-// router
-//   .group(() => {
-//     router.post('/event-add-ons', [EventAddOnsController, 'addAddOnToEvent']).use(middleware.auth())
-//     router.get('/event-add-ons/:eventId', [EventAddOnsController, 'getAddOnsForEvent'])
-//     router
-//       .put('/event-add-ons/:id', [EventAddOnsController, 'updateAddOnForEvent'])
-//       .use(middleware.auth())
-//     router
-//       .delete('/event-add-ons/:id', [EventAddOnsController, 'removeAddOnFromEvent'])
-//       .use(middleware.auth())
-//   })
-//   .prefix('/api/v1')
-
-// // Event Photographers routes
-// router
-//   .group(() => {
-//     router
-//       .post('/event-photographers', [EventPhotographersController, 'addPhotographerToEvent'])
-//       .use(middleware.auth())
-//     router.get('/event-photographers/:eventId', [
-//       EventPhotographersController,
-//       'getPhotographersForEvent',
-//     ])
-//     router
-//       .put('/event-photographers/:id', [
-//         EventPhotographersController,
-//         'updateEventPhotographerStatus',
-//       ])
-//       .use(middleware.auth())
-//     router
-//       .delete('/event-photographers/:id', [
-//         EventPhotographersController,
-//         'removePhotographerFromEvent',
-//       ])
-//       .use(middleware.auth())
-//   })
-//   .prefix('/api/v1')
-
 // Booking routes
 router
   .group(() => {
-    router.post('/bookings', [BookingsController, 'createBooking']).use(middleware.auth())
-    router.get('/bookings/:id', [BookingsController, 'getBooking']).use(middleware.auth())
-    router.put('/bookings/:id', [BookingsController, 'updateBooking']).use(middleware.auth())
-    router.delete('/bookings/:id', [BookingsController, 'deleteBooking']).use(middleware.auth())
+    // Get all bookings (admin only)
+    router.get('/bookings', [BookingsController, 'index']).use(middleware.auth())
+
+    // Get user's bookings
+    router.get('/user/bookings', [BookingsController, 'userBookings']).use(middleware.auth())
+
+    // Get organizer's event bookings
     router
-      .post('/bookings/:id/add-ons', [BookingsController, 'createBookingAddOn'])
+      .get('/events/:eventId/bookings', [BookingsController, 'organizerEventBookings'])
+      .use(middleware.auth())
+
+    // Get booking details
+    router.get('/bookings/:id', [BookingsController, 'show']).use(middleware.auth())
+
+    // Get booking statistics
+    router
+      .get('/events/:eventId/booking-statistics', [BookingsController, 'getStatistics'])
       .use(middleware.auth())
   })
   .prefix('/api/v1')
@@ -133,15 +108,6 @@ router
   })
 
   .prefix('/api/v1')
-
-// // Payment routes
-// router
-//   .group(() => {
-//     router.post('/payments/initialize', [PaymentsController, 'initializePayment'])
-//     router.get('/payments/verify', [PaymentsController, 'verifyPayment'])
-//     router.post('/payments/webhook', [PaymentsController, 'handleWebhook'])
-//   })
-//   .prefix('/api/v1')
 
 // Miscallenous routes
 router
@@ -240,3 +206,13 @@ router
   })
   .prefix('/api/v1')
   .use(middleware.auth())
+
+// Ticket pass routes
+router
+  .group(() => {
+    router.get('/bookings/:bookingId/passes', [EventsController, 'getTicketPassOptions'])
+    router.get('/bookings/:bookingId/apple-pass', [EventsController, 'generateAppleTicketPass'])
+    router.get('/bookings/:bookingId/google-pass', [EventsController, 'generateGoogleTicketPass'])
+  })
+  // .middleware(middleware.auth())
+  .prefix('/api/v1')

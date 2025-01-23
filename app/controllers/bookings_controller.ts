@@ -1,198 +1,190 @@
 import Booking from '#models/booking'
-import BookingAddOn from '#models/booking_add_on'
 import Event from '#models/event'
-import { generateTicketNumber } from '#services/ticket'
-import {
-  bookingAddOnIdValidator,
-  createBookingAddOnValidator,
-  createBookingValidator,
-} from '#validators/booking'
 import type { HttpContext } from '@adonisjs/core/http'
-import vine from '@vinejs/vine'
+import { DateTime } from 'luxon'
 
 export default class BookingsController {
   /**
-   * Create new booking
+   * Get all bookings with pagination and filters
    */
-  async createBooking({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(createBookingValidator)
+  async index({ request, response }: HttpContext) {
+    const page = request.input('page', 1)
+    const limit = request.input('limit', 10)
+    const status = request.input('status')
+    const eventId = request.input('event_id')
+    const date = request.input('date')
+    const search = request.input('search')
 
-    const event = await Event.findOrFail(payload.eventId)
+    const query = Booking.query()
+      .preload('event')
+      .preload('user')
 
-    // Check event availability
-    const bookingsCount = await Booking.query()
-      .where('eventId', event.id)
-      .whereNot('status', 'cancelled')
-      .count('* as total')
-      .first()
+      .orderBy('created_at', 'desc')
 
-    if (bookingsCount?.total! >= event.capacity) {
-      return response.badRequest({
-        success: false,
-        data: null,
-        error: {
-          code: 'CAPACITY_EXCEEDED',
-          message: 'Event has reached maximum capacity',
-        },
-        meta: { timestamp: new Date().toISOString() },
-      })
+    // Apply filters
+    if (status) {
+      query.where('status', status)
     }
 
-    const booking = await Booking.create({
-      eventId: event.id,
-      userId: auth.user!.id.toString(),
-      ticketNumber: await generateTicketNumber(),
-      totalAmount:
-        event.basePrice +
-        (payload.addOns?.reduce((sum, addon) => sum + addon.price * addon.quantity, 0) || 0),
-      photographyIncluded: payload.photographyIncluded || false,
-      status: 'pending',
+    if (eventId) {
+      query.where('event_id', eventId)
+    }
+    if (date) {
+      // @ts-expect-error
+      query.where('created_at', '>=', DateTime.fromISO(date).startOf('day').toSQL())!
+    }
+
+    if (search) {
+      query
+        .whereHas('user', (userQuery) => {
+          userQuery
+            .where('first_name', 'ILIKE', `%${search}%`)
+            .orWhere('last_name', 'ILIKE', `%${search}%`)
+            .orWhere('email', 'ILIKE', `%${search}%`)
+        })
+        .orWhere('booking_reference', 'ILIKE', `%${search}%`)
+    }
+
+    const bookings = await query.paginate(page, limit)
+
+    return response.ok({
+      status: 'success',
+      data: bookings,
     })
+  }
 
-    // Create add-ons if any
-    if (payload.addOns?.length) {
-      await booking.related('addOns').createMany(payload.addOns)
+  /**
+   * Get user's bookings
+   */
+  async userBookings({ auth, request, response }: HttpContext) {
+    const page = request.input('page', 1)
+    const limit = request.input('limit', 10)
+    const status = request.input('status')
+
+    const query = Booking.query()
+      .where('user_id', auth.user!.id)
+      .preload('event')
+
+      .orderBy('created_at', 'desc')
+
+    if (status) {
+      query.where('status', status)
     }
 
-    await booking.load('addOns')
-    await booking.load('event')
+    const bookings = await query.paginate(page, limit)
 
-    return response.json({
-      success: true,
-      data: booking,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
+    return response.ok({
+      status: 'success',
+      data: bookings,
+    })
+  }
+
+  /**
+   * Get organizer's event bookings
+   */
+  async organizerEventBookings({ auth, request, response }: HttpContext) {
+    const page = request.input('page', 1)
+    const limit = request.input('limit', 10)
+    const eventId = request.param('eventId')
+    const status = request.input('status')
+    const search = request.input('search')
+
+    // Verify event belongs to organizer
+    const event = await Event.query()
+      .where('id', eventId)
+      .where('organizer_id', auth.user!.id)
+      .firstOrFail()
+
+    const query = Booking.query()
+      .where('event_id', event.id)
+      .preload('user')
+
+      .orderBy('created_at', 'desc')
+
+    if (status) {
+      query.where('status', status)
+    }
+
+    if (search) {
+      query
+        .whereHas('user', (userQuery) => {
+          userQuery
+            .where('first_name', 'ILIKE', `%${search}%`)
+            .orWhere('last_name', 'ILIKE', `%${search}%`)
+            .orWhere('email', 'ILIKE', `%${search}%`)
+        })
+        .orWhere('booking_reference', 'ILIKE', `%${search}%`)
+    }
+
+    const bookings = await query.paginate(page, limit)
+
+    return response.ok({
+      status: 'success',
+      data: bookings,
     })
   }
 
   /**
    * Get booking details
    */
-  async getBooking({ params, response, auth }: HttpContext) {
-    const booking = await Booking.findOrFail(params.id)
-    // Check if user owns the booking or is the event organizer
-    if (
-      booking.userId !== auth.user!.id.toString() &&
-      booking.event.organizerId !== auth.user!.id
-    ) {
+  async show({ params, auth, response }: HttpContext) {
+    const booking = await Booking.query()
+      .where('id', params.id)
+      .preload('event')
+      .preload('user')
+
+      .firstOrFail()
+
+    // Check if user has access to this booking
+    const canAccess =
+      booking.user_id === auth.user!.id || // User's own booking
+      booking.event.organizer_id === auth.user!.id // Organizer's event booking
+
+    if (!canAccess) {
       return response.forbidden({
-        success: false,
-        data: null,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'You are not authorized to view this booking',
-        },
-        meta: { timestamp: new Date().toISOString() },
+        status: 'error',
+        message: 'You do not have access to this booking',
       })
     }
 
-    await booking.load('event')
-    await booking.load('addOns')
-    await booking.load('user')
-
-    return response.json({
-      success: true,
+    return response.ok({
+      status: 'success',
       data: booking,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
     })
   }
 
-  async updateBooking({ request, response, auth }: HttpContext) {
-    const bookingIdValidator = vine.compile(
-      vine.object({
-        params: vine.object({
-          id: vine.string(),
-        }),
-      })
-    )
-    const BookingStatusEnum = ['pending', 'confirmed', 'cancelled']
+  /**
+   * Get booking statistics
+   */
+  async getStatistics({ auth, params, response }: HttpContext) {
+    const eventId = params.eventId
 
-    const bookingUpdateValidator = vine.compile(
-      vine.object({
-        status: vine.enum(BookingStatusEnum),
-      })
-    )
+    // Verify event belongs to organizer
+    const event = await Event.query()
+      .where('id', eventId)
+      .where('organizer_id', auth.user!.id)
+      .firstOrFail()
 
-    const routePayload = await request.validateUsing(bookingIdValidator)
-    const booking = await Booking.findOrFail(routePayload.params.id)
+    const stats = await Booking.query()
+      .where('event_id', event.id)
+      .count('* as total')
+      .sum('total_amount as revenue')
+      .count('* as total_tickets')
+      .where('status', 'confirmed')
+      .first()
 
-    if (auth.user?.role !== 'organizer' && booking.userId !== auth.user!.id.toString()) {
-      return response.forbidden({
-        success: false,
-        data: null,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'You are not authorized to update this booking',
-        },
-        meta: { timestamp: new Date().toISOString() },
-      })
-    }
+    const recentBookings = await Booking.query()
+      .where('event_id', event.id)
+      .preload('user')
+      .orderBy('created_at', 'desc')
+      .limit(5)
 
-    const payload = await request.validateUsing(bookingUpdateValidator)
-
-    booking.status = payload.status as typeof booking.status
-
-    await booking.save()
-
-    return response.json({
-      success: true,
-      data: booking,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
-  }
-
-  async deleteBooking({ params, response, auth }: HttpContext) {
-    const booking = await Booking.findOrFail(params.id)
-
-    if (auth.user?.role !== 'organizer' && booking.userId !== auth.user!.id.toString()) {
-      return response.forbidden({
-        success: false,
-        data: null,
-      })
-    }
-
-    await booking.delete()
-
-    return response.json({
-      success: true,
-      data: null,
-    })
-  }
-
-  async createBookingAddOn({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(createBookingAddOnValidator)
-    const routePayload = await request.validateUsing(bookingAddOnIdValidator)
-    const booking = await Booking.findOrFail(payload.bookingId)
-
-    if (auth.user?.role !== 'organizer' && booking.userId !== auth.user!.id.toString()) {
-      return response.forbidden({
-        success: false,
-        data: null,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'You are not authorized to update this booking',
-        },
-      })
-    }
-
-    const addOn = await BookingAddOn.findOrFail(routePayload.params.id)
-
-    await booking.related('addOns').create({
-      addOnId: addOn.id,
-      quantity: payload.quantity,
-      bookingId: booking.id,
-      priceAtTime: addOn.priceAtTime,
-    })
-
-    await booking.load('addOns')
-
-    return response.json({
-      success: true,
-      data: booking,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
+    return response.ok({
+      status: 'success',
+      data: {
+        statistics: stats,
+        recentBookings,
+      },
     })
   }
 }

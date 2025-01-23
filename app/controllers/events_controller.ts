@@ -12,8 +12,14 @@ import {
 } from '#validators/event_ticket'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
+import Booking from '#models/booking'
+import { inject } from '@adonisjs/core'
+import TicketPassService from '#services/ticket_pass_service'
 
+@inject()
 export default class EventsController {
+  constructor(private ticketPassService: TicketPassService) {}
+
   /**
    * List all events with optional filters
    */
@@ -366,6 +372,63 @@ export default class EventsController {
       data: ticket,
       error: null,
       meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async generateAppleTicketPass({ params, response }: HttpContext) {
+    const booking = await Booking.findOrFail(params.bookingId)
+    await booking.load('event')
+    await booking.load('user')
+
+    const passBuffer = await this.ticketPassService.generateApplePass(booking, booking.event)
+
+    response.header('Content-Type', 'application/vnd.apple.pkpass')
+    response.header(
+      'Content-Disposition',
+      `attachment; filename="${booking.booking_reference}.pkpass"`
+    )
+
+    return response.send(passBuffer)
+  }
+
+  async generateGoogleTicketPass({ params, response }: HttpContext) {
+    const booking = await Booking.findOrFail(params.bookingId)
+    await booking.load('event')
+    await booking.load('user')
+
+    const jwt = await this.ticketPassService.generateGooglePass(booking, booking.event)
+
+    return response.json({
+      saveUrl: `https://pay.google.com/gp/v/save/${jwt}`,
+    })
+  }
+
+  async getTicketPassOptions({ request, response }: HttpContext) {
+    const booking = await Booking.findOrFail(request.params().bookingId)
+    await booking.load('event')
+
+    // Detect device/browser
+    const userAgent = request.header('User-Agent')?.toLowerCase() || ''
+    console.log(userAgent)
+    const isIOS = /iphone|ipad|ipod/.test(userAgent)
+    const isAndroid = /android/.test(userAgent)
+    const isMac = /macintosh|mac os x/i.test(userAgent)
+    // For Mac desktop browsers, also enable Apple Wallet pass
+    const isAppleSupported = isIOS || isMac
+
+    return response.json({
+      booking_reference: booking.booking_reference,
+      event_name: booking.event.name,
+      passes: {
+        apple: {
+          available: isAppleSupported,
+          url: `http://localhost:3333/api/bookings/${booking.id}/apple-pass`,
+        },
+        google: {
+          available: isAndroid,
+          url: `http://localhost:3333/api/bookings/${booking.id}/google-pass`,
+        },
+      },
     })
   }
 }
