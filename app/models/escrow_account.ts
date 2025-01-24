@@ -5,7 +5,12 @@ import User from './user.js'
 import Event from './event.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
-
+export enum EscrowAccountStatus {
+  HELD = 'held',
+  RELEASED = 'released',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded',
+}
 export default class EscrowAccount extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
@@ -23,7 +28,7 @@ export default class EscrowAccount extends BaseModel {
   declare currency: string
 
   @column()
-  declare status: 'held' | 'released' | 'cancelled' | 'refunded'
+  declare status: EscrowAccountStatus
 
   @column.dateTime()
   declare held_at: DateTime

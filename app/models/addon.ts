@@ -80,6 +80,9 @@ export default class Addon extends BaseModel {
   @column()
   declare photographer_id: number | null
 
+  @column()
+  declare charge_seperately: boolean
+
   // Equipment specific fields
   @column({
     prepare: (value: EquipmentDetails) => {
@@ -133,7 +136,6 @@ export default class Addon extends BaseModel {
 
   @hasMany(() => PhotographyService)
   declare services: HasMany<typeof PhotographyService>
-  quantity: number
 
   // Computed Properties
   @computed()

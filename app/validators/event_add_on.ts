@@ -13,6 +13,7 @@ export const addonSchema = vine.object({
   event_id: vine.number(),
   photographer_id: vine.number().nullable().optional(),
   photo_count: vine.number().nullable().optional(),
+  charge_seperately: vine.boolean(),
   equipment_details: vine
     .object({
       brand: vine.string().optional(),

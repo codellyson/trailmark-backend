@@ -87,6 +87,7 @@ export default class EventPaymentsController {
           price: addon.price,
           total: addon.price * (item?.quantity || 0),
           photographer_id: addon.photographer_id,
+          charge_seperately: addon.charge_seperately,
         })
       }
 

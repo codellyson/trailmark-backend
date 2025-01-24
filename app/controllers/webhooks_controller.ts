@@ -5,7 +5,7 @@ import env from '#start/env'
 import EventPayment from '#models/event_payment'
 import Event from '#models/event'
 import Wallet from '#models/wallet'
-import EscrowAccount from '#models/escrow_account'
+import EscrowAccount, { EscrowAccountStatus } from '#models/escrow_account'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import Booking, { AttendeeDetails } from '#models/booking'
@@ -161,13 +161,15 @@ export default class WebhooksController {
         const { addons = [] } = payment.metadata
         for (const addon of addons) {
           if (addon.type === 'photography' && addon.photographer_id) {
-            await EscrowAccount.create(
-              {
-                event_id: payment.event_id,
-                photographer_id: addon.photographer_id,
-                amount: addon.price * addon.quantity,
-                status: 'held',
-                held_at: DateTime.now(),
+            const totalPhotographyFee = addons.reduce((acc, curr) => acc + curr.price, 0)
+            await EscrowAccount.createMany(
+              addons.map((addon) => ({
+                currency: payment.currency,
+                event_id: payment.event_id!,
+                photographer_id: addon.photographer_id!,
+                amount: totalPhotographyFee,
+                status: EscrowAccountStatus.HELD,
+                held_at: DateTime.now().toISO(),
                 release_date: DateTime.now().plus({ days: 7 }), // or use event date
                 metadata: {
                   payment_id: payment.id,
@@ -176,7 +178,7 @@ export default class WebhooksController {
                   customer_id: payment.customer_id,
                   completed_at: DateTime.now().toISO(),
                 },
-              },
+              })),
               { client: trx }
             )
           }
