@@ -58,41 +58,44 @@ export default class EventPaymentsController {
     const eventId = request.param('eventId')
     const paymentReference = payload.payment_reference
     const event = await Event.findOrFail(eventId)
-
+    const addonPayloads = payload.addons!
+    const ticketPayloads = payload.tickets
+    const userPayload = payload.user
     // Start transaction
     const trx = await db.transaction()
 
     try {
-      // Calculate addon costs and validate availability
-      let totalAddonCost = 0
       const addonDetails: any[] = []
 
-      for (const item of payload.addons || []) {
-        const addon = await Addon.findOrFail(item?.addon?.id)
+      for (const item of addonPayloads) {
+        const addon = item?.addon
+        const quantity = item?.quantity!
+        const existingAddon = await Addon.findOrFail(addon?.id)
 
-        // Check addon availability
-        if (!(await addon.checkAvailability(item?.quantity || 0))) {
-          throw new Error(`Addon ${addon.name} is not available in requested quantity`)
+        if (!(await existingAddon.checkAvailability(quantity))) {
+          throw new Error(`Addon ${existingAddon.name} is not available in requested quantity`)
+        }
+        await existingAddon.reserve(quantity || 0)
+        let addonPhotographer: User | null = null
+        if (addon?.type === 'photography') {
+          addonPhotographer = await User.findOrFail(existingAddon.photographer_id)
         }
 
-        // Reserve the addon
-        await addon.reserve(item?.quantity || 0)
-
-        // Don't add to totalAmount since it's already included in payload.amount
         addonDetails.push({
-          addon_id: addon.id,
-          name: addon.name,
-          type: addon.type,
-          quantity: item?.quantity || 0,
-          price: addon.price,
-          total: addon.price * (item?.quantity || 0),
-          photographer_id: addon.photographer_id,
-          charge_seperately: addon.charge_seperately,
+          id: existingAddon.id,
+          quantity,
+          price: existingAddon.price,
+          name: existingAddon.name,
+          description: existingAddon.description,
+          total: existingAddon.price * quantity,
+          photographer_id: existingAddon.photographer_id,
+          photographer_name: `${addonPhotographer?.first_name} ${addonPhotographer?.last_name}`,
+          photographer_email: addonPhotographer?.email,
         })
       }
 
-      // Use payload.amount directly since it already includes both ticket and addon costs
       const totalAmount = payload.amount
+
       let userId: number | null = null
 
       if (payload.user) {
@@ -111,7 +114,7 @@ export default class EventPaymentsController {
         userId = user.id
       }
 
-      // Create payment record
+      // Create a new event payment record
       const payment = await EventPayment.addToDatabase(
         {
           customer_id: userId!,
@@ -131,8 +134,6 @@ export default class EventPaymentsController {
         },
         trx
       )
-
-      // Commit transaction
       await trx.commit()
 
       return response.json({
@@ -155,10 +156,7 @@ export default class EventPaymentsController {
         error: null,
       })
     } catch (error) {
-      console.log(error)
-      // Rollback transaction
       await trx.rollback()
-
       // Cancel addon reservations
       for (const item of payload.addons || []) {
         const addon = await Addon.findOrFail(item?.addon?.id)

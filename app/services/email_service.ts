@@ -79,12 +79,43 @@ export default class EmailService {
         .to(booking.user.email)
         .from(this.from.address!, this.from.name)
         .htmlView('mails/booking_confirmation', {
-          booking,
+          booking: {
+            ...booking,
+            selected_tickets: JSON.parse(booking.selected_tickets as unknown as string),
+          },
           user: booking.user,
           event: booking.event,
           bookingUrl: `${env.get('APP_URL')}/bookings/${booking.id}`,
           logo: env.get('APP_LOGO_URL'),
           title: 'Booking Confirmation',
+        })
+    })
+  }
+
+  /**
+   * Send ticket email
+   */
+  async sendTicket(booking: Booking) {
+    const attendee =
+      typeof booking.attendee_details === 'string'
+        ? JSON.parse(booking.attendee_details)
+        : booking.attendee_details
+
+    console.log('Sending ticket to:', attendee.email, attendee)
+
+    await this.mailer.send((message) => {
+      message
+        .subject(`Ticket for ${booking.event.title}`)
+        .to(attendee.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/ticket', {
+          booking: {
+            ...booking,
+            attendee_details: attendee,
+            selected_tickets: JSON.parse(booking.selected_tickets as unknown as string),
+          },
+          event: booking.event,
+          attendee,
         })
     })
   }

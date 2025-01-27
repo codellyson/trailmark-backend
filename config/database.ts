@@ -16,7 +16,6 @@ const dbConfig = defineConfig({
           rejectUnauthorized: false,
         },
       },
-
       migrations: {
         naturalSort: true,
         paths: ['database/migrations'],

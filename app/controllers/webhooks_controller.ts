@@ -9,9 +9,10 @@ import EscrowAccount, { EscrowAccountStatus } from '#models/escrow_account'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import Booking, { AttendeeDetails } from '#models/booking'
-import Ticket from '#models/ticket'
+import Ticket, { TicketType } from '#models/ticket'
 import EmailService from '#services/email_service'
 import User from '#models/user'
+import Addon from '#models/addon'
 
 @inject()
 export default class WebhooksController {
@@ -43,10 +44,8 @@ export default class WebhooksController {
           await this.handleSuccessfulCharge(event.data)
           break
         default:
-          break
+          return response.status(200).send({ status: 'Webhook processed' })
       }
-
-      return response.status(200).send({ status: 'Webhook processed' })
     } catch (error) {
       console.error('Webhook processing error:', {
         error,
@@ -54,7 +53,7 @@ export default class WebhooksController {
         reference: event.data?.reference,
         paymentData: event.data,
       })
-      return response.status(500).send({ status: 'Webhook processing failed' })
+      return response.status(200).send({ status: 'Webhook processing failed' })
     }
   }
 
@@ -62,8 +61,6 @@ export default class WebhooksController {
     const trx = await db.transaction()
 
     try {
-      console.log('Processing payment:', data.reference)
-
       const payment = await EventPayment.query()
         .where('payment_reference', data.reference)
         .where('status', 'pending')
@@ -87,7 +84,7 @@ export default class WebhooksController {
         customerEmail: payment.customer.email,
         eventName: payment.event?.title,
       })
-
+      console.log(payment.metadata, 'payment.metadata')
       // Update payment status first
       payment.status = 'completed'
       payment.paid_at = DateTime.now()
@@ -100,7 +97,56 @@ export default class WebhooksController {
 
       try {
         // Create booking
-        const booking = await Booking.create({
+        const metadataAddons = payment.metadata.addons || []
+        const metadataTickets = payment.metadata.tickets || []
+
+        const stringifiedMetadataAddons = JSON.stringify(
+          metadataAddons?.map(
+            // @ts-expect-error - need to fix this type error
+            (addon, { quantity }: { addon: Addon; quantity: number }) => {
+              return {
+                addon_id: addon.id.toString(),
+                addon_name: addon.name,
+                quantity: quantity,
+                unit_price: addon.price,
+                subtotal: addon.price * quantity,
+              }
+            }
+          ) || []
+        )
+        const stringifiedMetadataTickets = JSON.stringify(
+          metadataTickets?.map(
+            // @ts-expect-error - need to fix this type error
+            ({ ticket, quantity }: { ticket: Ticket; quantity: number }) => ({
+              ticket_id: ticket.id,
+              ticket_name: ticket.name,
+              quantity: quantity,
+              unit_price: ticket.price,
+              subtotal: ticket.price * quantity,
+            })
+          ) || []
+        )
+
+        // Add debug logging
+        console.log(
+          'Payment Details:',
+          typeof data === 'string' ? data : JSON.stringify(data || {})
+        )
+        console.log(
+          'Selected Addons:',
+          typeof stringifiedMetadataAddons === 'string'
+            ? stringifiedMetadataAddons
+            : JSON.stringify(stringifiedMetadataAddons || [])
+        )
+        console.log(
+          'Selected Tickets:',
+          typeof stringifiedMetadataTickets === 'string'
+            ? stringifiedMetadataTickets
+            : JSON.stringify(stringifiedMetadataTickets || [])
+        )
+
+        // Ensure proper JSON formatting
+        const bookingData = {
           user_id: payment.customer_id,
           event_id: payment.event_id,
           booking_reference: `BK-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
@@ -109,33 +155,41 @@ export default class WebhooksController {
           currency: payment.currency || 'NGN',
           payment_status: 'completed',
           payment_reference: payment.payment_reference,
-          payment_details: {
-            provider: 'paystack',
-            transaction_id: data.id,
-            payment_method: data.channel,
-            payment_date: DateTime.now().toISO(),
-            metadata: data,
-          },
-          selected_tickets:
-            (payment.metadata.tickets?.map((ticket) => ({
-              ticket_id: ticket.id,
-              ticket_name: ticket.name,
-              quantity: ticket.quantity,
-              unit_price: ticket.price,
-              subtotal: ticket.price * ticket.quantity,
-            })) as any) || [],
-          selected_addons:
-            payment.metadata.addons?.map((addon: any) => ({
-              addon_id: addon.addon_id,
-              addon_name: addon.name,
-              quantity: addon.quantity,
-              unit_price: addon.price,
-              subtotal: addon.price * addon.quantity,
-            })) || [],
-          attendee_details: (payment.metadata.customer_info as AttendeeDetails) || {},
-        })
+          payment_details: JSON.stringify(typeof data === 'string' ? JSON.parse(data) : data),
+          selected_tickets: JSON.stringify(
+            typeof stringifiedMetadataTickets === 'string'
+              ? JSON.parse(stringifiedMetadataTickets)
+              : stringifiedMetadataTickets
+          ),
+          selected_addons: JSON.stringify(
+            typeof stringifiedMetadataAddons === 'string'
+              ? JSON.parse(stringifiedMetadataAddons)
+              : stringifiedMetadataAddons
+          ),
+          attendee_details: JSON.stringify(payment.metadata.customer_info),
+        }
 
-        console.log('Booking created successfully:', booking.booking_reference)
+        // Add validation check
+        try {
+          // Verify each JSON field is valid
+          JSON.parse(bookingData.payment_details)
+          JSON.parse(bookingData.selected_tickets)
+          JSON.parse(bookingData.selected_addons)
+        } catch (e) {
+          console.error('Invalid JSON format:', e)
+          throw e
+        }
+
+        // Log the final data
+        console.log('Final booking data:', bookingData)
+
+        const booking = await Booking.create(bookingData as any)
+
+        console.log(
+          'Booking created successfully:',
+          booking.booking_reference,
+          JSON.stringify(booking, null, 2)
+        )
 
         // Update ticket counts after booking creation
         if (payment.metadata.tickets?.length) {
@@ -163,22 +217,26 @@ export default class WebhooksController {
           if (addon.type === 'photography' && addon.photographer_id) {
             const totalPhotographyFee = addons.reduce((acc, curr) => acc + curr.price, 0)
             await EscrowAccount.createMany(
-              addons.map((addon) => ({
-                currency: payment.currency,
-                event_id: payment.event_id!,
-                photographer_id: addon.photographer_id!,
-                amount: totalPhotographyFee,
-                status: EscrowAccountStatus.HELD,
-                held_at: DateTime.now().toISO(),
-                release_date: DateTime.now().plus({ days: 7 }), // or use event date
-                metadata: {
-                  payment_id: payment.id,
-                  booking_id: booking.id,
-                  addon_id: addon.id,
-                  customer_id: payment.customer_id,
-                  completed_at: DateTime.now().toISO(),
+              [
+                {
+                  currency: payment.currency,
+                  event_id: payment.event_id!,
+                  photographer_id: addon.photographer_id!,
+                  amount: totalPhotographyFee,
+                  status: EscrowAccountStatus.HELD,
+                  held_at: DateTime.now(),
+                  release_date: DateTime.fromJSDate(new Date(payment.event.date as any)).plus({
+                    days: 7,
+                  }), // or use event date
+                  metadata: {
+                    payment_id: payment.id,
+                    booking_id: booking.id,
+                    addon_id: addon.id,
+                    customer_id: payment.customer_id,
+                    completed_at: DateTime.now().toISO(),
+                  },
                 },
-              })),
+              ],
               { client: trx }
             )
           }
@@ -275,6 +333,8 @@ export default class WebhooksController {
         console.log('Payment confirmation email sent')
         await this.emailService.sendBookingConfirmation(booking)
         console.log('Booking confirmation email sent')
+        await this.emailService.sendTicket(booking)
+        console.log('Ticket email sent')
         // If photography addon exists, send photographer assignment
         const photographyAddon = payment.metadata.addons?.find(
           (addon) => addon.type === 'photography'

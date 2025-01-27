@@ -3,8 +3,6 @@ import { BaseModel, column, belongsTo, SnakeCaseNamingStrategy, hasMany } from '
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Event from './event.js'
-import Ticket from './ticket.js'
-import Addon from './addon.js'
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'refunded'
 
@@ -30,6 +28,7 @@ export type PaymentDetails = {
   payment_method?: string
   payment_date?: string
   metadata?: Record<string, any>
+  gateway_response?: Record<string, any>
 }
 
 export type AttendeeDetails = {
@@ -59,24 +58,13 @@ export default class Booking extends BaseModel {
 
   @column({
     prepare: (value: SelectedTicket[]) => {
-      if (typeof value === 'object') {
-        return value
-      }
-
-      if (typeof value === 'string') {
-        try {
-          return JSON.parse(value)
-        } catch (error) {
-          return value
-        }
-      }
-      return value
+      return JSON.stringify(value || [])
     },
     consume: (value: string) => {
       try {
         return JSON.parse(value)
       } catch (error) {
-        return value
+        return []
       }
     },
   })
@@ -84,20 +72,13 @@ export default class Booking extends BaseModel {
 
   @column({
     prepare: (value: SelectedAddon[]) => {
-      if (typeof value === 'object') {
-        return value
-      }
-
-      if (typeof value === 'string') {
-        return JSON.parse(value)
-      }
-      return value
+      return JSON.stringify(value || [])
     },
     consume: (value: string) => {
       try {
         return JSON.parse(value)
       } catch (error) {
-        return value
+        return []
       }
     },
   })
@@ -116,24 +97,28 @@ export default class Booking extends BaseModel {
   declare payment_reference: string | null
 
   @column({
-    prepare: (value: PaymentDetails) => JSON.stringify(value),
+    prepare: (value: PaymentDetails) => {
+      return JSON.stringify(value || {})
+    },
     consume: (value: string) => {
       try {
         return JSON.parse(value)
       } catch (error) {
-        return value
+        return {}
       }
     },
   })
   declare payment_details: PaymentDetails
 
   @column({
-    prepare: (value: AttendeeDetails) => JSON.stringify(value),
+    prepare: (value: AttendeeDetails) => {
+      return JSON.stringify(value || {})
+    },
     consume: (value: string) => {
       try {
         return JSON.parse(value)
       } catch (error) {
-        return value
+        return {}
       }
     },
   })
@@ -201,13 +186,13 @@ export default class Booking extends BaseModel {
     this.status = 'confirmed'
     await this.save()
   }
-  public async checkEventLimit(event: Event): Promise<Boolean> {
-    const bookingsCount = await Booking.query()
-      .where('event_id', event.id)
-      .whereNot('status', 'cancelled')
-      .count('* as total')
-      .first()
+  // public async checkEventLimit(event: Event): Promise<Boolean> {
+  //   const bookingsCount = await Booking.query()
+  //     .where('event_id', event.id)
+  //     .whereNot('status', 'cancelled')
+  //     .count('* as total')
+  //     .first()
 
-    return bookingsCount?.total! < event.capacity
-  }
+  //   return bookingsCount?.total! < event.capacity
+  // }
 }

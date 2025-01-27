@@ -1,0 +1,78 @@
+@layout.base()
+  @slot('meta')
+    <meta name="description" content="Booking Confirmation" />
+  @endslot
+  @slot('main')
+    <div
+      style="max-width: 320px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+    >
+      {{-- Event Header --}}
+      <div
+        style="background: #6366F1; color: white; padding: 16px; border-top-left-radius: 12px; border-top-right-radius: 12px;"
+      >
+        <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">
+          {{ event.title }}
+        </h1>
+        <div style="font-size: 14px;">
+          <div style="margin-bottom: 4px;">
+            {{ event.date.toFormat('EEEE, MMMM dd, yyyy') }}
+          </div>
+          <div>
+            {{ event.start_time }} - {{ event.end_time }}
+          </div>
+        </div>
+      </div>
+
+      {{-- Ticket Details --}}
+      <div
+        style="border: 1px dashed #E5E7EB; border-top: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; padding: 16px;"
+      >
+        {{-- Attendee Section --}}
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 500; color: #6B7280; margin-bottom: 4px; font-size: 13px;">
+            Attendee
+          </div>
+          <div style="font-weight: 500; color: #111827; font-size: 14px;">
+            {{ booking.attendee_details.first_name }} {{ booking.attendee_details.last_name }}
+          </div>
+        </div>
+
+        {{-- Ticket Type Section --}}
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 500; color: #6B7280; margin-bottom: 4px; font-size: 13px;">
+            Ticket Type
+          </div>
+          <div style="font-weight: 500; color: #111827; font-size: 14px;">
+            @each((ticket, index) in booking.selected_tickets)
+              {{ ticket.quantity }}x {{ ticket.ticket_name }}
+            @end
+          </div>
+        </div>
+
+        {{-- Venue Section --}}
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 500; color: #6B7280; margin-bottom: 4px; font-size: 13px;">
+            Venue
+          </div>
+          <div style="font-weight: 500; color: #111827; font-size: 14px;">
+            {{ event.location }}
+          </div>
+        </div>
+
+        {{-- QR Code Section --}}
+        <div style="text-align: center; margin: 24px 0;">
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ booking.booking_reference }}"
+            alt="QR Code"
+            style="width: 150px; height: 150px;"
+          />
+        </div>
+
+        {{-- Booking Reference --}}
+        <div style="text-align: center; font-family: monospace; font-size: 14px; color: #4B5563;">
+          {{ booking.booking_reference }}
+        </div>
+      </div>
+    </div>
+  @endslot
+@end

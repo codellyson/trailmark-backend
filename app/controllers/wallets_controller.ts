@@ -116,4 +116,50 @@ export default class WalletsController {
       error: null,
     })
   }
+
+  // Get organizer wallet
+  async getOrganizerWallet({ auth, response }: HttpContext) {
+    try {
+      const wallet = await Wallet.query().where('user_id', auth.user!.id).firstOrFail()
+      wallet.load('transactions')
+      return response.json({
+        success: true,
+        data: wallet,
+        error: null,
+      })
+    } catch (error) {
+      console.error('Error getting organizer wallet:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An error occurred while fetching the wallet',
+        },
+      })
+    }
+  }
+
+  // Get organizer wallet transactions
+  async getOrganizerTransactions({ auth, response }: HttpContext) {
+    try {
+      const wallet = await Wallet.query().where('user_id', auth.user!.id).firstOrFail()
+      wallet.load('transactions')
+      return response.json({
+        success: true,
+        data: wallet,
+        error: null,
+      })
+    } catch (error) {
+      console.error('Error getting organizer wallet:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An error occurred while fetching the wallet',
+        },
+      })
+    }
+  }
 }

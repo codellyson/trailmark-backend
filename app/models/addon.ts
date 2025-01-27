@@ -85,21 +85,18 @@ export default class Addon extends BaseModel {
 
   // Equipment specific fields
   @column({
-    prepare: (value: EquipmentDetails) => {
-      if (typeof value === 'string') {
-        return value
-      }
+    prepare: (value: EquipmentDetails | null) => {
+      if (!value) return null
+      if (typeof value === 'string') return value
       return JSON.stringify(value)
     },
-    consume: (value: string) => {
-      if (!value) return {}
-      if (typeof value === 'object') {
-        return value
-      }
+    consume: (value: string | null) => {
+      if (!value) return null
+      if (typeof value === 'object') return value
       try {
         return JSON.parse(value)
       } catch (error) {
-        return {}
+        return null
       }
     },
   })
@@ -107,8 +104,20 @@ export default class Addon extends BaseModel {
 
   // Transportation specific fields
   @column({
-    prepare: (value: TransportationDetails) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
+    prepare: (value: TransportationDetails | null) => {
+      if (!value) return null
+      if (typeof value === 'string') return value
+      return JSON.stringify(value)
+    },
+    consume: (value: string | null) => {
+      if (!value) return null
+      if (typeof value === 'object') return value
+      try {
+        return JSON.parse(value)
+      } catch (error) {
+        return null
+      }
+    },
   })
   declare transportation_details: TransportationDetails | null
 

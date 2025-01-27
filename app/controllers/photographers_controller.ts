@@ -2,6 +2,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import { photographerProfileValidator, photographerSearchValidator } from '#validators/photographer'
 import { updatePhotographerProfileValidator } from '#validators/user'
+import Wallet from '#models/wallet'
+import WalletTransaction from '#models/wallet_transaction'
 
 export default class PhotographersController {
   /**
@@ -126,12 +128,30 @@ export default class PhotographersController {
    * Get photographer wallet
    */
   async getPhotographerWallet({ response, auth }: HttpContext) {
-    const photographer = await User.findOrFail(auth.user!.id)
-    return response.json({
-      success: true,
-      data: photographer.wallet,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
+    try {
+      const wallet = await Wallet.query().where('user_id', auth.user!.id).firstOrFail()
+      wallet.load('transactions')
+
+      return response.json({
+        success: true,
+        data: {
+          wallet,
+          transactions: wallet.transactions,
+        },
+        error: null,
+        meta: { timestamp: new Date().toISOString() },
+      })
+    } catch (error) {
+      console.error('Error getting photographer wallet:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An error occurred while fetching the wallet',
+        },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
   }
 }

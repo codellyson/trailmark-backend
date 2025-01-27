@@ -64,7 +64,9 @@ export default class Ticket extends BaseModel {
 
   @hasMany(() => Booking)
   declare bookings: HasMany<typeof Booking>
-  quantity: number
+
+  @column()
+  declare quantity: number
 
   // Computed Properties
   @computed()

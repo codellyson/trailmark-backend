@@ -149,6 +149,8 @@ router
     // Common routes
     router.get('/wallet', [WalletsController, 'getWallet'])
     router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
+    // router.get('/wallet/payout-settings', [WalletsController, 'getPayoutSettings'])
+    // router.get('/wallet/payout-history', [WalletsController, 'getPayoutHistory'])
 
     // Photographer-specific routes
     router
@@ -160,8 +162,11 @@ router
       .use(middleware.auth())
 
     // Organizer-specific routes
+    router.get('/organizer/wallet', [WalletsController, 'getOrganizerWallet'])
+    router.get('/organizer/wallet/transactions', [WalletsController, 'getOrganizerTransactions'])
   })
   .prefix('/api/v1')
+  .use(middleware.auth())
 
 // Event payments routes or checkout
 router
