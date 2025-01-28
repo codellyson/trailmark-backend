@@ -11,7 +11,6 @@ const WalletsController = () => import('#controllers/wallets_controller')
 const EventPaymentsController = () => import('#controllers/event_payments_controller')
 const EscrowController = () => import('#controllers/escrow_controller')
 const PhotographerJobsController = () => import('#controllers/photographer_jobs_controller')
-const PaymentsController = () => import('#controllers/payments_controller')
 const StatsController = () => import('#controllers/stats_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
@@ -163,7 +162,7 @@ router
 
     // Organizer-specific routes
     router.get('/organizer/wallet', [WalletsController, 'getOrganizerWallet'])
-    router.get('/organizer/wallet/transactions', [WalletsController, 'getOrganizerTransactions'])
+    router.get('/organizer/transactions', [WalletsController, 'getOrganizerTransactions'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())

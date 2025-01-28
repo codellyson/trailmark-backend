@@ -1,9 +1,11 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, hasMany, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import WalletTransaction from './wallet_transaction.js'
 import { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class Wallet extends BaseModel {
   @column({ isPrimary: true })

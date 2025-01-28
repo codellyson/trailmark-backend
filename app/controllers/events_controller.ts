@@ -30,7 +30,9 @@ export default class EventsController {
     const dateRange = request.input('date_range')
 
     const query = Event.query()
-      // .preload('organizer')
+      .preload('addons', (_query) => _query.preload('photographer'))
+      .preload('tickets_options')
+      .preload('organizer')
       .if(status, (q) => q.where('status', status))
       .if(dateRange, (q) => {
         const [start, end] = dateRange.split(',')

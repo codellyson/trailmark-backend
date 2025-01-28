@@ -1,5 +1,7 @@
 import User from '#models/user'
 import Wallet from '#models/wallet'
+import EmailService from '#services/email_service'
+import { inject } from '@adonisjs/core/container'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 
@@ -20,7 +22,9 @@ const registerValidator = vine.compile(
   })
 )
 
+@inject()
 export default class AuthController {
+  constructor(private emailService: EmailService) {}
   /**
    * Handle user login
    */
@@ -79,47 +83,66 @@ export default class AuthController {
   async register({ request, response }: HttpContext) {
     const payload = await request.validateUsing(registerValidator)
 
-    // Check if user already exists
-    const existingUser = await User.findBy('email', payload.email)
-    if (existingUser) {
-      return response.conflict({
+    try {
+      // Check if user already exists
+      const existingUser = await User.findBy('email', payload.email)
+      if (existingUser) {
+        return response.badRequest({
+          success: false,
+          data: {
+            email: payload.email,
+          },
+          error: {
+            code: 'EMAIL_TAKEN',
+            message: 'Email is already registered',
+          },
+          meta: { timestamp: new Date().toISOString() },
+        })
+      }
+
+      // Create new user
+      const user = await User.create({
+        email: payload.email,
+        password: payload.password,
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        role: payload.role,
+      })
+
+      // Generate access token
+      const token = await User.accessTokens.create(user)
+
+      const userWallet = await Wallet.findBy('user_id', user.id)
+      if ((user.role === 'photographer' || user.role === 'organizer') && !userWallet) {
+        await Wallet.setupWallet(user.id)
+      }
+      console.log(user.email!, user.first_name!)
+      await this.emailService.sendWelcome(user)
+
+      return response.json({
+        success: true,
+        data: {
+          token: token.value?.release(),
+          user: {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role: user.role,
+          },
+        },
+        error: null,
+        meta: { timestamp: new Date().toISOString() },
+      })
+    } catch (error) {
+      console.log(error)
+      return response.badRequest({
         success: false,
         data: null,
-        error: {
-          code: 'EMAIL_TAKEN',
-          message: 'Email is already registered',
-        },
+        error: { code: 'INTERNAL_SERVER_ERROR', message: error.message },
         meta: { timestamp: new Date().toISOString() },
       })
     }
-
-    // Create new user
-    const user = await User.create({
-      email: payload.email,
-      password: payload.password,
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      role: payload.role,
-    })
-
-    // Generate access token
-    const token = await User.accessTokens.create(user)
-
-    return response.json({
-      success: true,
-      data: {
-        token: token.value?.release(),
-        user: {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          role: user.role,
-        },
-      },
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
   }
 
   /**

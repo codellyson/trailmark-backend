@@ -1,0 +1,245 @@
+@layout.base()
+  @slot('meta')
+    <meta name="description" content="Registration Confirmation" />
+  @endslot
+  @slot('main')
+    <!-- Container wrapper for fixed width -->
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+      <!-- Header Logo -->
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="{{ logoUrl }}" alt="Naija Events Logo" style="max-width: 200px; height: auto;" />
+      </div>
+
+      <h2 style="color: #2D3748; font-size: 24px; margin-bottom: 20px; text-align: center;">
+        Welcome to Naija Events!
+      </h2>
+
+      <p style="color: #4A5568; font-size: 16px; line-height: 1.6;">
+        Dear {{ name }},
+      </p>
+
+      @if(user.role === 'user')
+        <p>
+          Thank you for joining Naija Events! We're excited to have you as part of our community.
+        </p>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <h3>
+            What you can do:
+          </h3>
+          <ul style="list-style: none; padding-left: 0;">
+            <li style="margin: 10px 0;">
+              🎫 Browse and book exciting events
+            </li>
+            <li style="margin: 10px 0;">
+              📱 Save tickets to your digital wallet
+            </li>
+            <li style="margin: 10px 0;">
+              📅 Track your upcoming events
+            </li>
+            <li style="margin: 10px 0;">
+              ⭐ Rate and review events you attend
+            </li>
+          </ul>
+        </div>
+
+        <p>
+          Ready to explore events? Check out our featured events and find something exciting!
+        </p>
+
+      @elseif(user.role === 'organizer')
+        <p>
+          Welcome to Naija Events as an Event Organizer! We're thrilled to have you join our platform.
+        </p>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <h3>
+            Your Organizer Features:
+          </h3>
+          <ul style="list-style: none; padding-left: 0;">
+            <li style="margin: 10px 0;">
+              📊 Create and manage events
+            </li>
+            <li style="margin: 10px 0;">
+              🎟️ Set up ticket types and pricing
+            </li>
+            <li style="margin: 10px 0;">
+              📈 Track sales and attendance
+            </li>
+            <li style="margin: 10px 0;">
+              💰 Manage payments and withdrawals
+            </li>
+          </ul>
+        </div>
+
+        <p>
+          Ready to host your first event? Visit your dashboard to get started!
+        </p>
+
+      @elseif(user.role === 'photographer')
+        <p>
+          Welcome to Naija Events as a Professional Photographer! We're excited to have your expertise.
+        </p>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <h3>
+            Your Photography Features:
+          </h3>
+          <ul style="list-style: none; padding-left: 0;">
+            <li style="margin: 10px 0;">
+              📸 Access photography assignments
+            </li>
+            <li style="margin: 10px 0;">
+              📅 Manage your availability
+            </li>
+            <li style="margin: 10px 0;">
+              💳 Track earnings and payments
+            </li>
+            <li style="margin: 10px 0;">
+              ⭐ Build your portfolio and ratings
+            </li>
+          </ul>
+        </div>
+
+        <p>
+          Ready to start capturing moments? Check your dashboard for available assignments!
+        </p>
+      @endif
+
+      <!-- Account Details with improved styling -->
+      <div
+        style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e2e8f0;"
+      >
+        <h3 style="color: #2D3748; margin-bottom: 15px; font-size: 18px;">
+          Account Details:
+        </h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #718096;">
+              Email:
+            </td>
+            <td style="padding: 8px 0; color: #4A5568;">
+              {{ user.email }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #718096;">
+              Name:
+            </td>
+            <td style="padding: 8px 0; color: #4A5568;">
+              {{ user.first_name }} {{ user.last_name }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #718096;">
+              Role:
+            </td>
+            <td style="padding: 8px 0; color: #4A5568;">
+              {{ user.role.charAt(0).toUpperCase() + user.role.slice(1) }}
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Next Steps with improved styling -->
+      <div style="margin: 25px 0;">
+        <h3 style="color: #2D3748; margin-bottom: 15px; font-size: 18px;">
+          Next Steps:
+        </h3>
+        <ol style="padding-left: 20px; color: #4A5568;">
+          <li style="margin: 10px 0;">
+            Complete your profile
+          </li>
+          <li style="margin: 10px 0;">
+            Verify your email address
+          </li>
+          @if(user.role === 'organizer')
+            <li style="margin: 10px 0;">
+              Set up your payment information
+            </li>
+            <li style="margin: 10px 0;">
+              Create your first event
+            </li>
+          @elseif(user.role === 'photographer')
+            <li style="margin: 10px 0;">
+              Upload your portfolio
+            </li>
+            <li style="margin: 10px 0;">
+              Set your availability
+            </li>
+          @else
+            <li style="margin: 10px 0;">
+              Browse upcoming events
+            </li>
+            <li style="margin: 10px 0;">
+              Follow your favorite organizers
+            </li>
+          @endif
+        </ol>
+      </div>
+
+      <!-- CTA Button with improved styling -->
+      <div style="text-align: center; margin: 35px 0;">
+        <a
+          href="{{ dashboardUrl }}"
+          style="background: #ED8433; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+        >
+          Go to Dashboard →
+        </a>
+      </div>
+
+      <!-- Help Section -->
+      <div
+        style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e2e8f0;"
+      >
+        <h3 style="color: #2D3748; margin-bottom: 15px; font-size: 18px;">
+          Need Help?
+        </h3>
+        <p style="color: #4A5568; margin-bottom: 10px;">
+          Our support team is available 24/7 to assist you:
+        </p>
+        <ul style="list-style: none; padding-left: 0; color: #4A5568;">
+          <li style="margin: 8px 0;">
+            📧 Email: support
+            @naijaevents.ng
+          </li>
+          <li style="margin: 8px 0;">
+            📱 Phone: +234 8103742587
+          </li>
+          <li style="margin: 8px 0;">
+            💬 Live Chat: Available on our website
+          </li>
+        </ul>
+      </div>
+
+      <p style="color: #4A5568; margin-top: 30px;">
+        Best regards,<br />
+        <strong>The Naija Events Team</strong>
+      </p>
+
+      <!-- Social Media Links -->
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ socialLinks.facebook }}" style="text-decoration: none; margin: 0 10px;">          <img src="{{ socialIcons.facebook }}" alt="Facebook" style="width: 24px; height: 24px;" /></a>
+        <a href="{{ socialLinks.twitter }}" style="text-decoration: none; margin: 0 10px;">          <img src="{{ socialIcons.twitter }}" alt="Twitter" style="width: 24px; height: 24px;" /></a>
+        <a href="{{ socialLinks.instagram }}" style="text-decoration: none; margin: 0 10px;">          <img src="{{ socialIcons.instagram }}" alt="Instagram" style="width: 24px; height: 24px;" /></a>
+      </div>
+
+      <!-- Footer -->
+      <div
+        style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px; text-align: center; color: #718096; font-size: 14px;"
+      >
+        <p style="margin-bottom: 10px;">
+          © {{ new Date().getFullYear() }} Naija Events. All rights reserved.
+        </p>
+        <p>
+          <a href="{{ links.privacy }}" style="color: #718096; text-decoration: underline; margin: 0 10px;">Privacy Policy</a>
+          <a href="{{ links.terms }}" style="color: #718096; text-decoration: underline; margin: 0 10px;">Terms of Service</a>
+          <a
+            href="{{ links.unsubscribe }}"
+            style="color: #718096; text-decoration: underline; margin: 0 10px;"
+          >Unsubscribe</a>
+        </p>
+      </div>
+    </div>
+  @endslot
+@end

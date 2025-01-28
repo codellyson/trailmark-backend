@@ -13,9 +13,8 @@ const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
   passwordColumnName: 'password',
 })
-
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 export default class User extends compose(BaseModel, AuthFinder) {
-  static namingStrategy = new SnakeCaseNamingStrategy()
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
   @column({ isPrimary: true })

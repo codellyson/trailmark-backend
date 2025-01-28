@@ -4,6 +4,9 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Wallet from './wallet.js'
 import Event from './event.js'
 import User from './user.js'
+import { SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
+
+BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class WalletTransaction extends BaseModel {
   @column({ isPrimary: true })

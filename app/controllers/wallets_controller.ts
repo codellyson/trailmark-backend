@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Wallet from '#models/wallet'
 import Event from '#models/event'
+import WalletTransaction from '#models/wallet_transaction'
 export default class WalletsController {
   /**
    * Get user wallet
@@ -143,11 +144,23 @@ export default class WalletsController {
   // Get organizer wallet transactions
   async getOrganizerTransactions({ auth, response }: HttpContext) {
     try {
+      console.log(auth.user!.id, 'auth.user!.id')
       const wallet = await Wallet.query().where('user_id', auth.user!.id).firstOrFail()
-      wallet.load('transactions')
+      const walletTransactions = await wallet.related('transactions').query()
+      const eventId = walletTransactions.map((transaction) => transaction.metadata.event_id)!
+      const events = await Event.findMany(eventId)
+      const newTransactions = walletTransactions.map((transaction) => {
+        const matchedEvent = events.find(
+          (event) => Number(event.id) === Number(transaction.metadata?.event_id)
+        )
+        return {
+          ...transaction.serialize(),
+          event: matchedEvent,
+        }
+      })
       return response.json({
         success: true,
-        data: wallet,
+        data: newTransactions,
         error: null,
       })
     } catch (error) {

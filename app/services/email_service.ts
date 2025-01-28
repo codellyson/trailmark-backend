@@ -24,6 +24,39 @@ export default class EmailService {
   }
 
   /**
+   * Send welcome email
+   */
+  async sendWelcome(user: User) {
+    await this.mailer.send((message) => {
+      message
+        .subject('Welcome to our platform')
+        .to(user.email!)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/successful_registration', {
+          name: user.first_name!,
+          user,
+          socialLinks: {
+            facebook: env.get('FACEBOOK_URL'),
+            twitter: env.get('TWITTER_URL'),
+            instagram: env.get('INSTAGRAM_URL'),
+          },
+          links: {
+            privacy: env.get('PRIVACY_URL'),
+            terms: env.get('TERMS_URL'),
+            unsubscribe: env.get('UNSUBSCRIBE_URL'),
+          },
+          socialIcons: {
+            facebook: env.get('FACEBOOK_LOGO_URL'),
+            twitter: env.get('TWITTER_LOGO_URL'),
+            instagram: env.get('INSTAGRAM_LOGO_URL'),
+          },
+          logo: env.get('APP_LOGO_URL'),
+          title: 'Welcome to our platform',
+        })
+    })
+  }
+
+  /**
    * Send payment confirmation email
    */
   async sendPaymentConfirmation(payment: EventPayment) {
