@@ -57,26 +57,32 @@ export default class BookingsController {
    * Get user's bookings
    */
   async userBookings({ auth, request, response }: HttpContext) {
-    const page = request.input('page', 1)
-    const limit = request.input('limit', 10)
-    const status = request.input('status')
+    console.log({ auth })
+    try {
+      // const page = request.input('page', 1)
+      // const limit = request.input('limit', 10)
+      // const status = request.input('status')
+      // console.log(auth.user)
+      // const query = Booking.query()
+      //   .where('user_id', Number(auth.user!.id))
+      //   .preload('event')
 
-    const query = Booking.query()
-      .where('user_id', auth.user!.id)
-      .preload('event')
+      //   .orderBy('created_at', 'desc')
 
-      .orderBy('created_at', 'desc')
+      // if (status) {
+      //   query.where('status', status)
+      // }
 
-    if (status) {
-      query.where('status', status)
+      // const bookings = await query.paginate(page, limit)
+
+      return response.ok({
+        status: 'success',
+        data: [],
+        error: null,
+      })
+    } catch (error: unknown) {
+      return response.status(500).json({})
     }
-
-    const bookings = await query.paginate(page, limit)
-
-    return response.ok({
-      status: 'success',
-      data: bookings,
-    })
   }
 
   /**

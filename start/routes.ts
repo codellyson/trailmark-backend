@@ -218,5 +218,13 @@ router
     router.get('/bookings/:bookingId/apple-pass', [EventsController, 'generateAppleTicketPass'])
     router.get('/bookings/:bookingId/google-pass', [EventsController, 'generateGoogleTicketPass'])
   })
+
   // .middleware(middleware.auth())
+  .prefix('/api/v1')
+
+router
+  .group(() => {
+    router.get('/bookings/user', [BookingsController, 'userBookings'])
+  })
+  .use(middleware.auth())
   .prefix('/api/v1')
