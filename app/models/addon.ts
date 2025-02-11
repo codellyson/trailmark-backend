@@ -31,6 +31,12 @@ export interface TransportationDetails {
   includes?: string[]
 }
 
+export interface RevenueSharing {
+  organizer_percentage: number
+  provider_percentage: number
+  platform_percentage: number
+}
+
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
 export default class Addon extends BaseModel {
@@ -82,6 +88,9 @@ export default class Addon extends BaseModel {
 
   @column()
   declare charge_seperately: boolean
+
+  @column()
+  declare revenue_share: RevenueSharing | null
 
   // Equipment specific fields
   @column({

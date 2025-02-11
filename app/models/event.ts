@@ -9,6 +9,37 @@ import Ticket from './ticket.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
+export interface ThemeSettings {
+  template:
+    | 'default'
+    | 'minimalist'
+    | 'modern'
+    | 'classic'
+    | 'elegant'
+    | 'creative'
+    | 'vintage'
+    | 'futuristic'
+    | 'retro'
+    | 'gothic'
+    | 'boho'
+    | 'hipster'
+    | 'minimalist'
+    | 'modern'
+    | 'classic'
+    | 'elegant'
+    | 'creative'
+    | 'vintage'
+    | 'futuristic'
+    | 'retro'
+    | 'gothic'
+    | 'boho'
+    | 'hipster'
+  primary_color: string
+  secondary_color: string
+  font_family: string
+  hero_layout: string
+  show_countdown: boolean
+}
 export default class Event extends BaseModel {
   @column({ isPrimary: true })
   declare id: string
@@ -60,6 +91,9 @@ export default class Event extends BaseModel {
 
   @column()
   declare sales_deadline: string
+
+  @column()
+  declare theme_settings: ThemeSettings
 
   @column({
     prepare: (
