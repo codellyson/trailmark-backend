@@ -1,11 +1,12 @@
-import { BaseModel, belongsTo, column, hasMany, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
-import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
+import { BaseModel, belongsTo, column, hasMany, manyToMany, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import Booking from './booking.js'
 import User from './user.js'
 import Addon from './addon.js'
 import EventPayment from './event_payment.js'
 import Ticket from './ticket.js'
+import Vendor from './vendor.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
@@ -76,6 +77,70 @@ export default class Event extends BaseModel {
 
   @column()
   declare location: string
+
+  @column({
+    prepare: (value: {
+      address: string
+      city: string
+      state: string
+      country: string
+      coordinates: { lat: number; lng: number }
+      venue_name?: string
+    }) => JSON.stringify(value),
+    consume: (value: string) => JSON.parse(value),
+  })
+  declare locationDetails: {
+    address: string
+    city: string
+    state: string
+    country: string
+    coordinates: { lat: number; lng: number }
+    venue_name?: string
+  }
+
+  @column({
+    prepare: (value: string[]) => JSON.stringify(value),
+    consume: (value: string) => JSON.parse(value),
+  })
+  declare categories: string[]
+
+  @column({
+    prepare: (value: string[]) => JSON.stringify(value),
+    consume: (value: string) => JSON.parse(value),
+  })
+  declare tags: string[]
+
+  @column({
+    prepare: (value: {
+      title: string
+      description: string
+      image: string
+      url: string
+    }) => JSON.stringify(value),
+    consume: (value: string) => JSON.parse(value),
+  })
+  declare socialShare: {
+    title: string
+    description: string
+    image: string
+    url: string
+  }
+
+  @column({
+    prepare: (value: {
+      facebook?: { shares: number }
+      twitter?: { shares: number }
+      instagram?: { shares: number }
+      whatsapp?: { shares: number }
+    }) => JSON.stringify(value),
+    consume: (value: string) => JSON.parse(value),
+  })
+  declare socialMetrics: {
+    facebook?: { shares: number }
+    twitter?: { shares: number }
+    instagram?: { shares: number }
+    whatsapp?: { shares: number }
+  }
 
   @column.date()
   declare date: DateTime
@@ -189,5 +254,9 @@ export default class Event extends BaseModel {
     foreignKey: 'event_id',
   })
   declare payments: HasMany<typeof EventPayment>
+
+  @manyToMany(() => Vendor)
+  declare vendors: ManyToMany<typeof Vendor>
+
   name: any
 }

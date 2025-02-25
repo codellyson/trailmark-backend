@@ -5,36 +5,43 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.increments('id')
+      table.increments('id').primary()
 
       // Basic Info
-      table.string('email').notNullable().unique()
-      table.string('password').notNullable()
       table.string('first_name').notNullable()
       table.string('last_name').notNullable()
-      table.string('phone_number').nullable()
-      table.string('business_name').nullable()
-      table.string('business_address').nullable()
-      table.string('business_phone_number').nullable()
-      table.string('business_website').nullable()
+      table.string('email').unique().notNullable()
+      table.string('phone').unique().nullable()
+      table.string('password').notNullable()
 
-      // Profile & Settings
-      table.string('avatar_url').nullable()
+      // Profile
       table.text('bio').nullable()
-      table.jsonb('preferences').defaultTo('{}')
+      table.string('avatar_url').nullable()
+      table.jsonb('social_links').defaultTo('{}')
 
-      // Role & Status
-      table.enum('role', ['user', 'organizer', 'admin']).defaultTo('user')
+      // Verification & Status
+      table.boolean('is_email_verified').defaultTo(false)
+      table.boolean('is_phone_verified').defaultTo(false)
       table.enum('status', ['active', 'inactive', 'suspended']).defaultTo('active')
-
-      // Verification
-      table.boolean('email_verified').defaultTo(false)
+      table.string('verification_token').nullable()
       table.timestamp('email_verified_at').nullable()
+
+      // Preferences
+      table.jsonb('notification_preferences').defaultTo('{}')
+      table.string('timezone').defaultTo('UTC')
+      table.string('language').defaultTo('en')
+
+      // Role & Permissions
+      table.enum('role', ['user', 'organizer', 'admin']).defaultTo('user')
+      table.jsonb('permissions').defaultTo('[]')
+
+      // Remember Me Token
       table.string('remember_me_token').nullable()
 
       // Timestamps
       table.timestamp('created_at', { useTz: true }).notNullable()
       table.timestamp('updated_at', { useTz: true }).notNullable()
+      table.timestamp('last_login_at', { useTz: true }).nullable()
     })
   }
 

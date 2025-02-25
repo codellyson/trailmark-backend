@@ -5,9 +5,9 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.increments('id')
+      table.increments('id').primary()
 
-      // Event Relation
+      // Relations
       table
         .integer('event_id')
         .unsigned()
@@ -16,50 +16,51 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
         .notNullable()
 
-      // Add-on Details
+      // Basic Info
       table.string('name').notNullable()
       table.text('description').nullable()
-      table
-        .enum('type', ['photography', 'equipment_rental', 'transportation', 'custom'])
-        .notNullable()
-
-      // Pricing
       table.decimal('price', 10, 2).notNullable()
-      table.string('currency').notNullable()
-      table.string('currency_symbol').notNullable()
+      table.string('currency').defaultTo('USD')
 
-      // Capacity & Availability
-      table.integer('capacity').unsigned().nullable()
-      table.integer('sold_count').unsigned().defaultTo(0)
-      table.integer('reserved_count').unsigned().defaultTo(0)
+      // Configuration
+      table.enum('type', ['service', 'product', 'upgrade', 'other']).defaultTo('service')
+      table.boolean('is_required').defaultTo(false)
+      table.boolean('is_active').defaultTo(true)
+      table.integer('quantity_available').nullable()
+      table.integer('min_quantity').defaultTo(1)
+      table.integer('max_quantity').nullable()
 
-      // Photography specific fields
-      table.integer('photo_count').unsigned().nullable()
-      table
-        .integer('photographer_id')
-        .unsigned()
-        .references('id')
-        .inTable('users')
-        .onDelete('SET NULL')
-        .nullable()
+      // Pricing & Revenue
+      table.decimal('cost_price', 10, 2).nullable()
+      table.decimal('revenue_share_percentage', 5, 2).nullable()
+      table.jsonb('pricing_tiers').defaultTo('[]')
+      table.boolean('is_taxable').defaultTo(true)
+      table.decimal('tax_rate', 5, 2).nullable()
 
-      // Equipment specific fields
-      table.jsonb('equipment_details').nullable()
+      // Availability
+      table.timestamp('available_from', { useTz: true }).nullable()
+      table.timestamp('available_until', { useTz: true }).nullable()
+      table.jsonb('availability_rules').defaultTo('{}')
 
-      // Transportation specific fields
-      table.jsonb('transportation_details').nullable()
+      // Dependencies & Restrictions
+      table.jsonb('required_ticket_types').defaultTo('[]')
+      table.jsonb('excluded_ticket_types').defaultTo('[]')
+      table.jsonb('dependencies').defaultTo('[]')
+      table.jsonb('restrictions').defaultTo('{}')
 
-      // Status
-      table.enum('status', ['active', 'inactive', 'sold_out']).defaultTo('active')
+      // Media & Display
+      table.string('image_url').nullable()
+      table.integer('display_order').defaultTo(0)
+      table.jsonb('display_options').defaultTo('{}')
+
+      // Tracking & Analytics
+      table.integer('times_purchased').defaultTo(0)
+      table.decimal('total_revenue', 10, 2).defaultTo(0)
+      table.jsonb('analytics_data').defaultTo('{}')
 
       // Timestamps
       table.timestamp('created_at', { useTz: true }).notNullable()
       table.timestamp('updated_at', { useTz: true }).notNullable()
-    })
-
-    // Add indexes
-    this.schema.alterTable(this.tableName, (table) => {
-      table.index(['event_id', 'type', 'status'])
     })
   }
 

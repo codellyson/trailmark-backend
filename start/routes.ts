@@ -3,15 +3,13 @@ import { middleware } from './kernel.js'
 const MiscallenousController = () => import('#controllers/miscallenous_controller')
 const AuthController = () => import('#controllers/auth_controller')
 const EventsController = () => import('#controllers/events_controller')
-const PhotosController = () => import('#controllers/photos_controller')
 const BookingsController = () => import('#controllers/bookings_controller')
 const WebhooksController = () => import('#controllers/webhooks_controller')
-const PhotographersController = () => import('#controllers/photographers_controller')
 const WalletsController = () => import('#controllers/wallets_controller')
 const EventPaymentsController = () => import('#controllers/event_payments_controller')
-const EscrowController = () => import('#controllers/escrow_controller')
-const PhotographerJobsController = () => import('#controllers/photographer_jobs_controller')
 const StatsController = () => import('#controllers/stats_controller')
+const VendorsController = () => import('#controllers/vendors_controller')
+const SocialSharingController = () => import('#controllers/social_sharing_controller')
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -91,23 +89,6 @@ router
   })
   .prefix('/api/v1')
 
-// Photo routes
-router
-  .group(() => {
-    router.post('/galleries', [PhotosController, 'createGallery']).use(middleware.auth())
-    router.delete('/photos/:id', [PhotosController, 'deletePhoto']).use(middleware.auth())
-    router.get('/galleries/:galleryId', [PhotosController, 'getGallery']).use(middleware.auth())
-    router.put('/galleries/:galleryId', [PhotosController, 'updateGallery']).use(middleware.auth())
-
-    router
-      .delete('/galleries/:galleryId', [PhotosController, 'deleteGallery'])
-      .use(middleware.auth())
-
-    router.post('/photos', [PhotosController, 'uploadPhotos']).use(middleware.auth())
-  })
-
-  .prefix('/api/v1')
-
 // Miscallenous routes
 router
   .group(() => {
@@ -123,24 +104,6 @@ router
     router.post('/payments/webhook/paystack', [WebhooksController, 'paystackWebhook'])
   })
   .prefix('/api/v1')
-
-// Photographers routes
-router
-  .group(() => {
-    // Protected routes - require authentication
-    router
-      .group(() => {
-        router.get('/profile', [PhotographersController, 'getPhotographerProfile'])
-        router.put('/profile', [PhotographersController, 'updateProfile'])
-        router.get('/wallet', [PhotographersController, 'getPhotographerWallet'])
-      })
-      .use(middleware.auth())
-
-    // Public routes
-    router.get('/', [PhotographersController, 'getPhotographers'])
-    router.get('/:id', [PhotographersController, 'getPhotographer'])
-  })
-  .prefix('/api/v1/photographers')
 
 // Wallet routes
 router
@@ -175,35 +138,6 @@ router
   })
   .prefix('/api/v1')
 
-// Escrow routes
-router
-  .group(() => {
-    router.post('/events/:eventId/escrow/release', [EscrowController, 'releaseToPhotographer'])
-    router.get('/events/:eventId/escrow', [EscrowController, 'getEventEscrow'])
-  })
-  .prefix('/api/v1')
-  .use(middleware.auth())
-
-// Photography Service API Endpoints
-router
-  .group(() => {
-    router.post('/addons/:addonId/photographer/respond', [
-      PhotographerJobsController,
-      'respondToJob',
-    ])
-    router.post('/addons/:addonId/photographer/complete', [
-      PhotographerJobsController,
-      'markServiceCompleted',
-    ])
-    router.get('/photographer/services', [PhotographerJobsController, 'getAssignedServices'])
-
-    // Payment API Endpoints
-    router.post('/events/payments', [EventPaymentsController, 'processPayment'])
-    router.get('/photographer/earnings', [WalletsController, 'getPhotographerEarnings'])
-  })
-  .prefix('/api/v1')
-  .use(middleware.auth())
-
 router
   .group(() => {
     router.get('/analytics/organizer', [StatsController, 'getDashboardStats'])
@@ -227,4 +161,42 @@ router
     router.get('/bookings/user', [BookingsController, 'userBookings'])
   })
   .use(middleware.auth())
+  .prefix('/api/v1')
+
+// Vendor routes
+router
+  .group(() => {
+    // Public routes
+    router.get('vendors', [VendorsController, 'index'])
+    router.get('vendors/:id', [VendorsController, 'show'])
+    router.get('vendors/:id/reviews', [VendorsController, 'getReviews'])
+    router.get('vendors/search/services', [VendorsController, 'searchByServices'])
+
+    // Protected routes
+    router
+      .group(() => {
+        router.post('vendors', [VendorsController, 'store'])
+        router.put('vendors/:id', [VendorsController, 'update'])
+        router.delete('vendors/:id', [VendorsController, 'destroy'])
+
+        // Admin only routes
+        router
+          .group(() => {
+            router.patch('vendors/:id/status', [VendorsController, 'updateStatus'])
+          })
+          .use(middleware.admin())
+      })
+      .use(middleware.auth())
+  })
+  .prefix('/api/v1')
+
+// Social sharing routes
+router
+  .group(() => {
+    router.get('/events/:id/share-links', [SocialSharingController, 'getShareLinks'])
+    router.get('/events/:id/preview-card', [SocialSharingController, 'getPreviewCard'])
+    router.post('/events/:id/share', [SocialSharingController, 'shareEvent'])
+    router.get('/events/:id/qr-code', [SocialSharingController, 'generateQR'])
+    router.post('/events/:id/share-metadata', [SocialSharingController, 'updateShareMetadata'])
+  })
   .prefix('/api/v1')
