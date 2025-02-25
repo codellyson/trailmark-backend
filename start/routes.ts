@@ -6,7 +6,6 @@ const EventsController = () => import('#controllers/events_controller')
 const BookingsController = () => import('#controllers/bookings_controller')
 const WebhooksController = () => import('#controllers/webhooks_controller')
 const WalletsController = () => import('#controllers/wallets_controller')
-const EventPaymentsController = () => import('#controllers/event_payments_controller')
 const StatsController = () => import('#controllers/stats_controller')
 const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
@@ -111,17 +110,6 @@ router
     // Common routes
     router.get('/wallet', [WalletsController, 'getWallet'])
     router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
-    // router.get('/wallet/payout-settings', [WalletsController, 'getPayoutSettings'])
-    // router.get('/wallet/payout-history', [WalletsController, 'getPayoutHistory'])
-
-    // Photographer-specific routes
-    router
-      .group(() => {
-        router.post('/wallet/payout-request', [WalletsController, 'requestPhotographerPayout'])
-        router.get('/wallet/pending-events', [WalletsController, 'getPendingEvents'])
-        router.get('/wallet/earnings', [WalletsController, 'getPhotographerEarnings'])
-      })
-      .use(middleware.auth())
 
     // Organizer-specific routes
     router.get('/organizer/wallet', [WalletsController, 'getOrganizerWallet'])
@@ -129,14 +117,6 @@ router
   })
   .prefix('/api/v1')
   .use(middleware.auth())
-
-// Event payments routes or checkout
-router
-  .group(() => {
-    router.post('/events/:eventId/payments', [EventPaymentsController, 'processPayment'])
-    router.get('/events/payments/:id', [EventPaymentsController, 'getPayment'])
-  })
-  .prefix('/api/v1')
 
 router
   .group(() => {

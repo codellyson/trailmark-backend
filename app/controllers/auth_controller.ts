@@ -4,6 +4,7 @@ import EmailService from '#services/email_service'
 import { inject } from '@adonisjs/core/container'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
+import hash from '@adonisjs/core/services/hash'
 
 const loginValidator = vine.compile(
   vine.object({
@@ -18,13 +19,14 @@ const registerValidator = vine.compile(
     password: vine.string().minLength(8),
     first_name: vine.string().minLength(2),
     last_name: vine.string().minLength(2),
-    role: vine.enum(['organizer', 'photographer', 'user']),
+    role: vine.enum(['organizer', 'vendor', 'user']),
   })
 )
 
 @inject()
 export default class AuthController {
   constructor(private emailService: EmailService) {}
+
   /**
    * Handle user login
    */
@@ -41,13 +43,23 @@ export default class AuthController {
           meta: { timestamp: new Date().toISOString() },
         })
       }
-      const token = await User.accessTokens.create(user)
-      const userWallet = await Wallet.findBy('user_id', user.id)
 
-      if (user.role === 'photographer' && !userWallet) {
-        await Wallet.setupWallet(user.id)
+      const verified = await hash.verify(user.password, payload.password)
+      console.log(user.password, payload.password, verified)
+      if (!verified) {
+        return response.unauthorized({
+          success: false,
+          data: null,
+          error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' },
+          meta: { timestamp: new Date().toISOString() },
+        })
       }
 
+      await user.load('wallet')
+      await user.load('organizer')
+      await user.load('vendor')
+
+      const token = await User.accessTokens.create(user)
       return response.json({
         success: true,
         data: {
@@ -100,7 +112,7 @@ export default class AuthController {
         })
       }
 
-      // Create new user
+      // Create new user - let the model handle password hashing
       const user = await User.create({
         email: payload.email,
         password: payload.password,
@@ -112,11 +124,13 @@ export default class AuthController {
       // Generate access token
       const token = await User.accessTokens.create(user)
 
+      // Setup wallet for vendors and organizers
       const userWallet = await Wallet.findBy('user_id', user.id)
-      if ((user.role === 'photographer' || user.role === 'organizer') && !userWallet) {
+      if ((user.role === 'vendor' || user.role === 'organizer') && !userWallet) {
         await Wallet.setupWallet(user.id)
       }
-      console.log(user.email!, user.first_name!)
+
+      // Send welcome email
       await this.emailService.sendWelcome(user)
 
       return response.json({
@@ -136,7 +150,7 @@ export default class AuthController {
       })
     } catch (error) {
       console.log(error)
-      return response.badRequest({
+      return response.internalServerError({
         success: false,
         data: null,
         error: { code: 'INTERNAL_SERVER_ERROR', message: error.message },

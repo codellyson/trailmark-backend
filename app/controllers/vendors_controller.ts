@@ -19,9 +19,7 @@ export default class VendorsController {
       order = 'desc',
     } = request.qs()
 
-    const query = Vendor.query()
-      .preload('user')
-      .orderBy(sort, order)
+    const query = Vendor.query().preload('user').orderBy(sort, order)
 
     if (category) {
       query.where('category', category)
@@ -46,7 +44,7 @@ export default class VendorsController {
     const payload = await request.validateUsing(createVendorValidator)
     const vendor = await Vendor.create({
       ...payload,
-      userId: auth.user!.id,
+      user_id: auth.user!.id,
     })
 
     await vendor.refresh()
@@ -71,7 +69,7 @@ export default class VendorsController {
     const vendor = await Vendor.findOrFail(params.id)
 
     // Only allow vendor owner or admin to update
-    if (vendor.userId !== auth.user!.id && !auth.user!.isAdmin) {
+    if (vendor.user_id !== auth.user!.id && !auth.user!.isAdmin) {
       throw new errors.E_UNAUTHORIZED_ACCESS('Not authorized to update this vendor')
     }
 
@@ -89,7 +87,7 @@ export default class VendorsController {
     const vendor = await Vendor.findOrFail(params.id)
 
     // Only allow vendor owner or admin to delete
-    if (vendor.userId !== auth.user!.id && !auth.user!.isAdmin) {
+    if (vendor.user_id !== auth.user!.id && !auth.user!.isAdmin) {
       throw new errors.E_UNAUTHORIZED_ACCESS('Not authorized to delete this vendor')
     }
 
@@ -120,7 +118,8 @@ export default class VendorsController {
     const { page = 1, limit = 10 } = request.qs()
     const vendor = await Vendor.findOrFail(params.id)
 
-    const reviews = await vendor.related('events')
+    const reviews = await vendor
+      .related('events')
       .query()
       .whereNotNull('rating')
       .whereNotNull('review')

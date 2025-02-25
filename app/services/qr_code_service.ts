@@ -1,4 +1,4 @@
-import QRCode from 'qrcode'
+import  QRCode from 'qrcode'
 
 interface QRCodeOptions {
   width?: number

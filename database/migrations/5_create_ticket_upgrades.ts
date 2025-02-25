@@ -1,7 +1,7 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
 export default class extends BaseSchema {
-  protected tableName = 'addons'
+  protected tableName = 'ticket_upgrades'
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
@@ -20,43 +20,30 @@ export default class extends BaseSchema {
       table.string('name').notNullable()
       table.text('description').nullable()
       table.decimal('price', 10, 2).notNullable()
-      table.string('currency').defaultTo('USD')
+      table.string('currency').defaultTo('NGN')
 
-      // Configuration
-      table.enum('type', ['service', 'product', 'upgrade', 'other']).defaultTo('service')
-      table.boolean('is_required').defaultTo(false)
+      // Type & Configuration
+      table
+        .enum('type', ['vip_access', 'parking', 'merchandise', 'insurance', 'seating', 'other'])
+        .defaultTo('other')
       table.boolean('is_active').defaultTo(true)
       table.integer('quantity_available').nullable()
-      table.integer('min_quantity').defaultTo(1)
-      table.integer('max_quantity').nullable()
-
-      // Pricing & Revenue
-      table.decimal('cost_price', 10, 2).nullable()
-      table.decimal('revenue_share_percentage', 5, 2).nullable()
-      table.jsonb('pricing_tiers').defaultTo('[]')
-      table.boolean('is_taxable').defaultTo(true)
-      table.decimal('tax_rate', 5, 2).nullable()
 
       // Availability
       table.timestamp('available_from', { useTz: true }).nullable()
       table.timestamp('available_until', { useTz: true }).nullable()
-      table.jsonb('availability_rules').defaultTo('{}')
 
-      // Dependencies & Restrictions
-      table.jsonb('required_ticket_types').defaultTo('[]')
-      table.jsonb('excluded_ticket_types').defaultTo('[]')
-      table.jsonb('dependencies').defaultTo('[]')
-      table.jsonb('restrictions').defaultTo('{}')
+      // Restrictions
+      table.jsonb('allowed_ticket_types').defaultTo('[]')
+      table.integer('max_per_ticket').nullable()
 
-      // Media & Display
+      // Display
       table.string('image_url').nullable()
       table.integer('display_order').defaultTo(0)
-      table.jsonb('display_options').defaultTo('{}')
 
-      // Tracking & Analytics
+      // Basic Tracking
       table.integer('times_purchased').defaultTo(0)
       table.decimal('total_revenue', 10, 2).defaultTo(0)
-      table.jsonb('analytics_data').defaultTo('{}')
 
       // Timestamps
       table.timestamp('created_at', { useTz: true }).notNullable()

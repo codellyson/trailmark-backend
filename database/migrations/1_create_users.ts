@@ -15,14 +15,17 @@ export default class extends BaseSchema {
       table.string('password').notNullable()
 
       // Profile
-      table.text('bio').nullable()
       table.string('avatar_url').nullable()
+      table.text('bio').nullable()
       table.jsonb('social_links').defaultTo('{}')
 
-      // Verification & Status
+      // Role & Status
+      table.enum('role', ['user', 'organizer', 'vendor', 'admin']).defaultTo('user')
+      table.enum('status', ['active', 'inactive', 'suspended']).defaultTo('active')
+
+      // Verification
       table.boolean('is_email_verified').defaultTo(false)
       table.boolean('is_phone_verified').defaultTo(false)
-      table.enum('status', ['active', 'inactive', 'suspended']).defaultTo('active')
       table.string('verification_token').nullable()
       table.timestamp('email_verified_at').nullable()
 
@@ -30,10 +33,6 @@ export default class extends BaseSchema {
       table.jsonb('notification_preferences').defaultTo('{}')
       table.string('timezone').defaultTo('UTC')
       table.string('language').defaultTo('en')
-
-      // Role & Permissions
-      table.enum('role', ['user', 'organizer', 'admin']).defaultTo('user')
-      table.jsonb('permissions').defaultTo('[]')
 
       // Remember Me Token
       table.string('remember_me_token').nullable()

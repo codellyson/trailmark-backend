@@ -4,80 +4,154 @@ import { DateTime } from 'luxon'
 import User from './user.js'
 import Event from './event.js'
 
-export type VendorCategory = 'photographer' | 'caterer' | 'decorator' | 'musician' | 'venue' | 'other'
+export type VendorCategory =
+  | 'photographer'
+  | 'caterer'
+  | 'decorator'
+  | 'musician'
+  | 'venue'
+  | 'other'
 export type VendorStatus = 'pending' | 'active' | 'suspended' | 'inactive'
 
 export default class Vendor extends BaseModel {
   @column({ isPrimary: true })
-  declare id: string
+  declare id: number
 
   @column()
-  declare userId: number
+  declare user_id: number
 
-  @belongsTo(() => User)
-  declare user: BelongsTo<typeof User>
+  // Business Info
+  @column()
+  declare business_name: string
 
   @column()
-  declare businessName: string
+  declare business_description: string | null
 
   @column()
-  declare description: string
+  declare business_email: string
 
   @column()
-  declare category: VendorCategory
+  declare business_phone: string | null
 
   @column()
-  declare status: VendorStatus
+  declare website: string | null
 
-  @column({
-    prepare: (value: string[]) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare services: string[]
-
-  @column({
-    prepare: (value: Array<{ url: string; key: string }>) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare portfolioImages: Array<{ url: string; key: string }>
+  // Business Details
+  @column()
+  declare tax_id: string | null
 
   @column()
-  declare contactEmail: string
+  declare registration_number: string | null
 
   @column()
-  declare contactPhone: string
+  declare business_hours: any
 
   @column()
-  declare address: string
-
-  @column({
-    prepare: (value: { lat: number; lng: number }) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare location: { lat: number; lng: number }
-
-  @column({
-    prepare: (value: { [key: string]: string }) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare socialMedia: {
-    facebook?: string
-    instagram?: string
-    twitter?: string
-    website?: string
-  }
+  declare service_areas: any
 
   @column()
-  declare averageRating: number
+  declare business_type:
+    | 'food'
+    | 'merchandise'
+    | 'services'
+    | 'entertainment'
+    | 'equipment'
+    | 'other'
+
+  // Address
+  @column()
+  declare address_line_1: string | null
 
   @column()
-  declare totalReviews: number
+  declare address_line_2: string | null
 
+  @column()
+  declare city: string | null
+
+  @column()
+  declare state: string | null
+
+  @column()
+  declare postal_code: string | null
+
+  @column()
+  declare country: string | null
+
+  // Verification & Status
+  @column()
+  declare isVerified: boolean
+
+  @column.dateTime()
+  declare verified_at: DateTime | null
+
+  @column()
+  declare verification_documents: any
+
+  // Business Settings
+  @column()
+  declare services_offered: any
+
+  @column()
+  declare products_offered: any
+
+  @column()
+  declare commissionRate: number | null
+
+  @column()
+  declare payment_details: any
+
+  // Media & Display
+  @column()
+  declare logo_url: string | null
+
+  @column()
+  declare gallery: any
+
+  @column()
+  declare social_media_links: any
+
+  @column()
+  declare terms_and_conditions: string | null
+
+  // Insurance & Compliance
+  @column()
+  declare has_insurance: boolean
+
+  @column.date()
+  declare insuranceExpiry: DateTime | null
+
+  @column()
+  declare certifications: any
+
+  @column()
+  declare compliance_documents: any
+
+  // Metrics
+  @column()
+  declare total_events: number
+
+  @column()
+  declare total_revenue: number
+
+  @column()
+  declare rating_count: number
+
+  @column()
+  declare average_rating: number
+
+  // Timestamps
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+
+  @column.dateTime()
+  declare last_active_at: DateTime | null
+
+  // Relationships
+  @belongsTo(() => User)
+  declare user: BelongsTo<typeof User>
 
   @manyToMany(() => Event)
   declare events: ManyToMany<typeof Event>

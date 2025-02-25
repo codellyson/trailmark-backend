@@ -1,10 +1,16 @@
-import { BaseModel, belongsTo, column, hasMany, manyToMany, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
+import {
+  BaseModel,
+  belongsTo,
+  column,
+  hasMany,
+  manyToMany,
+  SnakeCaseNamingStrategy,
+} from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import Booking from './booking.js'
 import User from './user.js'
-import Addon from './addon.js'
-import EventPayment from './event_payment.js'
+
 import Ticket from './ticket.js'
 import Vendor from './vendor.js'
 
@@ -111,12 +117,8 @@ export default class Event extends BaseModel {
   declare tags: string[]
 
   @column({
-    prepare: (value: {
-      title: string
-      description: string
-      image: string
-      url: string
-    }) => JSON.stringify(value),
+    prepare: (value: { title: string; description: string; image: string; url: string }) =>
+      JSON.stringify(value),
     consume: (value: string) => JSON.parse(value),
   })
   declare socialShare: {
@@ -240,20 +242,20 @@ export default class Event extends BaseModel {
   @hasMany(() => Booking)
   declare bookings: HasMany<typeof Booking>
 
-  @hasMany(() => Addon, {
-    foreignKey: 'event_id',
-  })
-  declare addons: HasMany<typeof Addon>
+  // @hasMany(() => Addon, {
+  //   foreignKey: 'event_id',
+  // })
+  // declare addons: HasMany<typeof Addon>
 
   @hasMany(() => Ticket, {
     foreignKey: 'event_id',
   })
   declare tickets_options: HasMany<typeof Ticket>
 
-  @hasMany(() => EventPayment, {
-    foreignKey: 'event_id',
-  })
-  declare payments: HasMany<typeof EventPayment>
+  // @hasMany(() => EventPayment, {
+  //   foreignKey: 'event_id',
+  // })
+  // declare payments: HasMany<typeof EventPayment>
 
   @manyToMany(() => Vendor)
   declare vendors: ManyToMany<typeof Vendor>

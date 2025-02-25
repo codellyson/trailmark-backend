@@ -1,20 +1,16 @@
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
-import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
-import { compose } from '@adonisjs/core/helpers'
-import hash from '@adonisjs/core/services/hash'
 import { BaseModel, column, SnakeCaseNamingStrategy, hasOne, hasMany } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 import type { HasOne, HasMany } from '@adonisjs/lucid/types/relations'
 import Wallet from './wallet.js'
-import PhotographyService from './photography_service.js'
-import EscrowAccount from './escrow_account.js'
+import Vendor from './vendor.js'
+import Organizer from './organizer.js'
+import { beforeSave } from '@adonisjs/lucid/orm'
+import hash from '@adonisjs/core/services/hash'
 
-const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
-  uids: ['email'],
-  passwordColumnName: 'password',
-})
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
-export default class User extends compose(BaseModel, AuthFinder) {
+
+export default class User extends BaseModel {
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
   @column({ isPrimary: true })
@@ -25,6 +21,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column()
   declare last_name: string | null
+
+  @column()
+  declare wallet_id: number | null
 
   @column()
   declare avatar_url: string | null
@@ -39,7 +38,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare password: string
 
   @column()
-  declare role: 'user' | 'photographer' | 'organizer' | 'admin'
+  declare role: 'user' | 'vendor' | 'organizer' | 'admin'
 
   @column()
   declare phone_number: string | null
@@ -82,18 +81,42 @@ export default class User extends compose(BaseModel, AuthFinder) {
   })
   declare wallet: HasOne<typeof Wallet>
 
-  @hasMany(() => PhotographyService, {
-    foreignKey: 'photographer_id',
-    onQuery(query) {
-      query.preload('event', (_query) => _query.preload('organizer'))
-      query.preload('photographer')
-      query.preload('addon')
-    },
+  @hasMany(() => Vendor, {
+    foreignKey: 'user_id',
   })
-  declare services: HasMany<typeof PhotographyService>
+  declare vendors: HasMany<typeof Vendor>
 
-  @hasMany(() => EscrowAccount, {
-    foreignKey: 'photographer_id',
+  @hasMany(() => Organizer, {
+    foreignKey: 'user_id',
   })
-  declare escrow: HasMany<typeof EscrowAccount>
+  declare organizers: HasMany<typeof Organizer>
+
+  @hasOne(() => Organizer, {
+    foreignKey: 'user_id',
+  })
+  declare organizer: HasOne<typeof Organizer>
+
+  @hasOne(() => Vendor, {
+    foreignKey: 'user_id',
+  })
+  declare vendor: HasOne<typeof Vendor>
+
+  @beforeSave()
+  static async hashPassword(user: User) {
+    if (user.$dirty.password) {
+      user.password = await hash.make(user.password)
+    }
+  }
+
+  static async isOrganizer(user: User): Promise<boolean> {
+    return user.role === 'organizer'
+  }
+
+  static async isVendor(user: User): Promise<boolean> {
+    return user.role === 'vendor'
+  }
+
+  static async isAdmin(user: User): Promise<boolean> {
+    return user.role === 'admin'
+  }
 }

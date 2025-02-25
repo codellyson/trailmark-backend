@@ -30,7 +30,7 @@ export default class WalletsController {
   async getTransactions({ auth, request, response }: HttpContext) {
     const { page = 1, limit = 10 } = request.qs()
 
-    const wallet = await Wallet.findByOrFail('userId', auth.user!.id)
+    const wallet = await Wallet.findByOrFail('user_id', auth.user!.id)
     const transactions = await wallet
       .related('transactions')
       .query()
@@ -49,7 +49,7 @@ export default class WalletsController {
    */
   async requestPhotographerPayout({ auth, request, response }: HttpContext) {
     const { amount, payoutMethod } = request.only(['amount', 'payoutMethod'])
-    const wallet = await Wallet.findByOrFail('userId', auth.user!.id)
+    const wallet = await Wallet.findByOrFail('user_id', auth.user!.id)
 
     if (!wallet.hasSufficientBalance(amount)) {
       return response.badRequest({
@@ -82,7 +82,7 @@ export default class WalletsController {
    * Get photographer earnings
    */
   async getPhotographerEarnings({ auth, response }: HttpContext) {
-    const wallet = await Wallet.findByOrFail('userId', auth.user!.id)
+    const wallet = await Wallet.findByOrFail('user_id', auth.user!.id)
 
     const earnings = {
       total_earnings: wallet.total_earnings,
