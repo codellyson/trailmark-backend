@@ -111,16 +111,16 @@ router
     router.get('/wallet', [WalletsController, 'getWallet'])
     router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
 
-    // Organizer-specific routes
-    router.get('/organizer/wallet', [WalletsController, 'getOrganizerWallet'])
-    router.get('/organizer/transactions', [WalletsController, 'getOrganizerTransactions'])
+    // User-specific routes
+    router.get('/user/wallet', [WalletsController, 'getUserWallet'])
+    router.get('/user/transactions', [WalletsController, 'getUserTransactions'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())
 
 router
   .group(() => {
-    router.get('/analytics/organizer', [StatsController, 'getDashboardStats'])
+    router.get('/analytics/user', [StatsController, 'getDashboardStats'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())

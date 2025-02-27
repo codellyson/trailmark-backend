@@ -4,7 +4,6 @@ import { DateTime } from 'luxon'
 import type { HasOne, HasMany } from '@adonisjs/lucid/types/relations'
 import Wallet from './wallet.js'
 import Vendor from './vendor.js'
-import Organizer from './organizer.js'
 import { beforeSave } from '@adonisjs/lucid/orm'
 import hash from '@adonisjs/core/services/hash'
 
@@ -38,7 +37,7 @@ export default class User extends BaseModel {
   declare password: string
 
   @column()
-  declare role: 'user' | 'vendor' | 'organizer' | 'admin'
+  declare role: 'user' | 'vendor' | 'admin'
 
   @column()
   declare phone_number: string | null
@@ -86,16 +85,6 @@ export default class User extends BaseModel {
   })
   declare vendors: HasMany<typeof Vendor>
 
-  @hasMany(() => Organizer, {
-    foreignKey: 'user_id',
-  })
-  declare organizers: HasMany<typeof Organizer>
-
-  @hasOne(() => Organizer, {
-    foreignKey: 'user_id',
-  })
-  declare organizer: HasOne<typeof Organizer>
-
   @hasOne(() => Vendor, {
     foreignKey: 'user_id',
   })
@@ -106,10 +95,6 @@ export default class User extends BaseModel {
     if (user.$dirty.password) {
       user.password = await hash.make(user.password)
     }
-  }
-
-  static async isOrganizer(user: User): Promise<boolean> {
-    return user.role === 'organizer'
   }
 
   static async isVendor(user: User): Promise<boolean> {

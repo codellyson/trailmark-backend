@@ -19,7 +19,7 @@ const registerValidator = vine.compile(
     password: vine.string().minLength(8),
     first_name: vine.string().minLength(2),
     last_name: vine.string().minLength(2),
-    role: vine.enum(['organizer', 'vendor', 'user']),
+    role: vine.enum(['user', 'vendor']),
   })
 )
 
@@ -56,7 +56,6 @@ export default class AuthController {
       }
 
       await user.load('wallet')
-      await user.load('organizer')
       await user.load('vendor')
 
       const token = await User.accessTokens.create(user)
@@ -126,7 +125,7 @@ export default class AuthController {
 
       // Setup wallet for vendors and organizers
       const userWallet = await Wallet.findBy('user_id', user.id)
-      if ((user.role === 'vendor' || user.role === 'organizer') && !userWallet) {
+      if (user.role === 'vendor' && !userWallet) {
         await Wallet.setupWallet(user.id)
       }
 

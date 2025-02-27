@@ -20,8 +20,20 @@ export default class extends BaseSchema {
       table.jsonb('social_links').defaultTo('{}')
 
       // Role & Status
-      table.enum('role', ['user', 'organizer', 'vendor', 'admin']).defaultTo('user')
+      table.enum('role', ['user', 'vendor', 'admin']).defaultTo('user')
       table.enum('status', ['active', 'inactive', 'suspended']).defaultTo('active')
+
+      // Business Info (formerly organizer info)
+      table.string('business_name').nullable()
+      table.text('business_description').nullable()
+      table.string('business_address').nullable()
+      table.string('business_phone_number').nullable()
+      table.string('business_email').nullable()
+      table.string('business_website').nullable()
+      table.string('tax_id').nullable()
+      table.string('registration_number').nullable()
+      table.boolean('is_business_verified').defaultTo(false)
+      table.timestamp('business_verified_at').nullable()
 
       // Verification
       table.boolean('is_email_verified').defaultTo(false)
@@ -29,10 +41,19 @@ export default class extends BaseSchema {
       table.string('verification_token').nullable()
       table.timestamp('email_verified_at').nullable()
 
-      // Preferences
-      table.jsonb('notification_preferences').defaultTo('{}')
+      // Preferences & Settings
+      table.jsonb('preferences').defaultTo('{}')
+      table.jsonb('payment_settings').defaultTo('{}')
+      table.jsonb('commission_settings').defaultTo('{}')
+      table.jsonb('permissions').defaultTo('{}')
       table.string('timezone').defaultTo('UTC')
       table.string('language').defaultTo('en')
+
+      // Metrics
+      table.integer('total_events').defaultTo(0)
+      table.integer('active_events').defaultTo(0)
+      table.decimal('total_revenue', 10, 2).defaultTo(0)
+      table.integer('total_attendees').defaultTo(0)
 
       // Remember Me Token
       table.string('remember_me_token').nullable()

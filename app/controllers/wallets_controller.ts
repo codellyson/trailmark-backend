@@ -118,8 +118,8 @@ export default class WalletsController {
     })
   }
 
-  // Get organizer wallet
-  async getOrganizerWallet({ auth, response }: HttpContext) {
+  // Get user wallet
+  async getUserWallet({ auth, response }: HttpContext) {
     try {
       const wallet = await Wallet.query().where('user_id', auth.user!.id).firstOrFail()
       wallet.load('transactions')
@@ -129,7 +129,7 @@ export default class WalletsController {
         error: null,
       })
     } catch (error) {
-      console.error('Error getting organizer wallet:', error)
+      console.error('Error getting user wallet:', error)
       return response.internalServerError({
         success: false,
         data: null,
@@ -141,8 +141,8 @@ export default class WalletsController {
     }
   }
 
-  // Get organizer wallet transactions
-  async getOrganizerTransactions({ auth, response }: HttpContext) {
+  // Get user wallet transactions
+  async getUserTransactions({ auth, response }: HttpContext) {
     try {
       console.log(auth.user!.id, 'auth.user!.id')
       const wallet = await Wallet.query().where('user_id', auth.user!.id).firstOrFail()
@@ -164,7 +164,7 @@ export default class WalletsController {
         error: null,
       })
     } catch (error) {
-      console.error('Error getting organizer wallet:', error)
+      console.error('Error getting user wallet:', error)
       return response.internalServerError({
         success: false,
         data: null,

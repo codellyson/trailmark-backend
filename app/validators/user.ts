@@ -6,7 +6,7 @@ export const createUserValidator = vine.compile(
     password: vine.string().trim().minLength(8),
     first_name: vine.string().trim().minLength(2),
     last_name: vine.string().trim().minLength(2),
-    role: vine.enum(['user', 'photographer', 'organizer']), // Updated to include photographer
+    role: vine.enum(['user', 'vendor']), // Updated to remove organizer
   })
 )
 

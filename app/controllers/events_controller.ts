@@ -65,11 +65,11 @@ export default class EventsController {
     // Ensure JSON fields are properly formatted
     console.log(payload)
 
-    if (auth.user?.role !== 'organizer') {
+    if (auth.user?.role !== 'user') {
       return response.forbidden({
         success: false,
         data: null,
-        error: { code: 'UNAUTHORIZED', message: 'You are not authorized to create an event' },
+        error: { code: 'UNAUTHORIZED', message: 'Only users can create events' },
         meta: { timestamp: new Date().toISOString() },
       })
     }
