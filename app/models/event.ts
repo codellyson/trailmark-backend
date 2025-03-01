@@ -1,5 +1,6 @@
 import {
   BaseModel,
+  beforeCreate,
   belongsTo,
   column,
   hasMany,
@@ -8,7 +9,8 @@ import {
 } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
-import Booking from './booking.js'
+import { v4 as uuidv4 } from 'uuid'
+
 import User from './user.js'
 
 import Ticket from './ticket.js'
@@ -47,22 +49,10 @@ export interface ThemeSettings {
   hero_layout: string
   show_countdown: boolean
 }
+
 export default class Event extends BaseModel {
   @column({ isPrimary: true })
   declare id: string
-
-  @column()
-  declare organizer_id: number
-  @belongsTo(() => User, {
-    foreignKey: 'organizer_id',
-    localKey: 'id',
-  })
-  declare organizer: BelongsTo<typeof User>
-  @column()
-  declare capacity: number
-
-  @column()
-  declare status: 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'
 
   @column()
   declare title: string
@@ -70,82 +60,23 @@ export default class Event extends BaseModel {
   @column()
   declare description: string
 
-  @column({
-    prepare: (value: Array<{ url: string; key: string }>) => JSON.stringify(value),
-  })
-  declare thumbnails: any[]
+  @column()
+  declare custom_url: string
 
   @column()
-  declare slug: string
+  declare event_category: string
 
   @column()
-  declare event_type: string
+  declare event_type: 'offline' | 'online' | 'hybrid'
 
   @column()
-  declare location: string
-
-  @column({
-    prepare: (value: {
-      address: string
-      city: string
-      state: string
-      country: string
-      coordinates: { lat: number; lng: number }
-      venue_name?: string
-    }) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare locationDetails: {
-    address: string
-    city: string
-    state: string
-    country: string
-    coordinates: { lat: number; lng: number }
-    venue_name?: string
-  }
-
-  @column({
-    prepare: (value: string[]) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare categories: string[]
-
-  @column({
-    prepare: (value: string[]) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare tags: string[]
-
-  @column({
-    prepare: (value: { title: string; description: string; image: string; url: string }) =>
-      JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare socialShare: {
-    title: string
-    description: string
-    image: string
-    url: string
-  }
-
-  @column({
-    prepare: (value: {
-      facebook?: { shares: number }
-      twitter?: { shares: number }
-      instagram?: { shares: number }
-      whatsapp?: { shares: number }
-    }) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
-  })
-  declare socialMetrics: {
-    facebook?: { shares: number }
-    twitter?: { shares: number }
-    instagram?: { shares: number }
-    whatsapp?: { shares: number }
-  }
+  declare event_frequency: 'single' | 'recurring'
 
   @column.date()
-  declare date: DateTime
+  declare start_date: DateTime
+
+  @column.date()
+  declare end_date: DateTime
 
   @column()
   declare start_time: string
@@ -154,111 +85,68 @@ export default class Event extends BaseModel {
   declare end_time: string
 
   @column()
-  declare sales_start_date: string
+  declare timezone: string
 
   @column()
-  declare sales_deadline: string
+  declare location: string
 
   @column()
-  declare theme_settings: ThemeSettings
-
-  @column({
-    prepare: (
-      value: Array<{
-        ticket_name: string
-        ticket_description: string
-        ticket_capacity: number
-        sales_start_date: string
-        sales_deadline: string
-        ticket_type: 'general' | 'early_bird' | 'vip'
-        ticket_currency: string
-        ticket_currency_symbol: string
-        ticket_price: number
-      }>
-    ) => JSON.stringify(value),
-  })
-  declare tickets: Array<{
-    ticket_name: string
-    ticket_description: string
-    ticket_capacity: number
-    sales_start_date: string
-    sales_deadline: string
-    ticket_type: 'general' | 'early_bird' | 'vip'
-    ticket_currency: string
-    ticket_currency_symbol: string
-    ticket_price: number
-  }>
+  declare capacity: number
 
   @column()
-  declare add_ons: {
-    photography_addons: {
-      enabled: boolean
-      packages: Array<{
-        price: number
-        name: string
-        description: string
-        photo_count: number
-        photographer_id: string
-      }>
-    }
-    equipment_rentals: {
-      enabled: boolean
-      packages: Array<{
-        price: number
-        name: string
-        description: string
-      }>
-    }
-    transportation_services: {
-      enabled: boolean
-      packages: Array<{
-        price: number
-        name: string
-        description: string
-      }>
-    }
-    custom_addons: {
-      enabled: boolean
-      packages: Array<{
-        price: number
-        name: string
-        description: string
-      }>
-    }
+  declare status: 'draft' | 'published' | 'cancelled'
+
+  @column()
+  declare theme_settings: {
+    template: string
+    primary_color: string
+    secondary_color: string
+    font_family: string
+    hero_layout: string
+    show_countdown: boolean
+    custom_css?: string
+    custom_domain?: string
   }
 
   @column()
-  declare waiver: {
-    enabled: boolean
-    content: string
+  declare social_details: {
+    website_url?: string
+    instagram_handle?: string
+    twitter_handle?: string
+    audiomack_url?: string
+    facebook_url?: string
   }
+
+  @column()
+  declare thumbnails: { url: string; key: string }[]
+
+  @column()
+  declare user_id: string
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
+  declare updated_at: DateTime
 
-  @hasMany(() => Booking)
-  declare bookings: HasMany<typeof Booking>
+  @hasMany(() => Ticket)
+  declare tickets: HasMany<typeof Ticket>
 
-  // @hasMany(() => Addon, {
-  //   foreignKey: 'event_id',
-  // })
-  // declare addons: HasMany<typeof Addon>
-
-  @hasMany(() => Ticket, {
-    foreignKey: 'event_id',
+  @manyToMany(() => Vendor, {
+    pivotTable: 'event_vendors',
+    pivotColumns: [
+      'status',
+      'notes',
+      'services',
+      'agreed_price',
+      'booth_location',
+      'booth_number',
+      'setup_time',
+      'teardown_time',
+    ],
   })
-  declare tickets_options: HasMany<typeof Ticket>
-
-  // @hasMany(() => EventPayment, {
-  //   foreignKey: 'event_id',
-  // })
-  // declare payments: HasMany<typeof EventPayment>
-
-  @manyToMany(() => Vendor)
   declare vendors: ManyToMany<typeof Vendor>
 
-  name: any
+  @belongsTo(() => User)
+  declare user: BelongsTo<typeof User>
 }

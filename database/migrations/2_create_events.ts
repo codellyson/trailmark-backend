@@ -3,71 +3,57 @@ import { BaseSchema } from '@adonisjs/lucid/schema'
 export default class extends BaseSchema {
   protected tableName = 'events'
 
-  async up() {
+  public async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id').primary()
-
-      // Relations
-      table
-        .integer('organizer_id')
-        .unsigned()
-        .references('id')
-        .inTable('users')
-        .onDelete('CASCADE')
-        .notNullable()
-
-      // Basic Info
       table.string('title').notNullable()
       table.text('description').notNullable()
-      table.string('slug').unique().notNullable()
-      table.integer('capacity').unsigned().nullable()
-      table.enum('visibility', ['public', 'private', 'unlisted']).defaultTo('public')
-
-      // Time & Location
-      table.date('date').notNullable()
+      table.string('custom_url').unique().notNullable()
+      table.string('event_category').notNullable()
+      table.enum('event_type', ['offline', 'online', 'hybrid']).defaultTo('offline')
+      table.enum('event_frequency', ['single', 'recurring']).defaultTo('single')
+      table.date('start_date').notNullable()
+      table.date('end_date').notNullable()
       table.string('start_time').notNullable()
       table.string('end_time').notNullable()
-      table.string('timezone').notNullable().defaultTo('UTC')
+      table.string('timezone').notNullable()
       table.string('location').notNullable()
-      table.jsonb('venue_details').defaultTo('{}')
-      table.jsonb('geo_location').defaultTo('{}')
+      table.integer('capacity').unsigned()
+      table.enum('status', ['draft', 'published']).defaultTo('draft')
 
-      // Event Type & Status
-      table.enum('event_type', ['online', 'offline', 'hybrid']).defaultTo('offline')
-      table.enum('status', ['draft', 'published', 'cancelled', 'completed']).defaultTo('draft')
+      // Theme settings as JSON
+      table.json('theme_settings').defaultTo(
+        JSON.stringify({
+          template: 'default',
+          primary_color: '#FF5733',
+          secondary_color: '#33FF57',
+          font_family: 'Inter',
+          hero_layout: 'default',
+          show_countdown: true,
+        })
+      )
 
-      // Media & Assets
-      table.jsonb('thumbnails').defaultTo('[]')
-      table.jsonb('gallery').defaultTo('[]')
-      table.jsonb('attachments').defaultTo('[]')
+      // Social details as JSON
+      table.json('social_details').defaultTo(
+        JSON.stringify({
+          website_url: '',
+          instagram_handle: '',
+          twitter_handle: '',
+          audiomack_url: '',
+          facebook_url: '',
+        })
+      )
 
-      // Event Configuration
-      table.jsonb('ticket_options').defaultTo('[]')
-      table.jsonb('add_ons').defaultTo('{}')
-      table.jsonb('waiver').defaultTo('{}')
-      table.boolean('requires_approval').defaultTo(false)
-      table.boolean('allows_waitlist').defaultTo(true)
-      table.integer('waitlist_limit').nullable()
+      // Thumbnails as JSON array
+      table.json('thumbnails').defaultTo('[]')
 
-      // Social & Sharing
-      table.boolean('social_sharing_enabled').defaultTo(true)
-      table.jsonb('social_sharing_options').defaultTo('{}')
-      table.jsonb('custom_social_meta').defaultTo('{}')
-
-      // Analytics & Metrics
-      table.integer('views_count').defaultTo(0)
-      table.integer('shares_count').defaultTo(0)
-      table.integer('bookings_count').defaultTo(0)
-      table.jsonb('analytics_data').defaultTo('{}')
-
-      // Timestamps
-      table.timestamp('published_at', { useTz: true }).nullable()
-      table.timestamp('created_at', { useTz: true }).notNullable()
-      table.timestamp('updated_at', { useTz: true }).notNullable()
+      table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE')
+      table.timestamp('created_at', { useTz: true })
+      table.timestamp('updated_at', { useTz: true })
     })
   }
 
-  async down() {
+  public async down() {
     this.schema.dropTable(this.tableName)
   }
 }

@@ -43,10 +43,6 @@ router
       .use(middleware.auth())
 
     router
-      .post('/events/:eventId/addons', [EventsController, 'createEventAddon'])
-      .use(middleware.auth())
-
-    router
       .get('/events/:eventId/tickets', [EventsController, 'getEventTickets'])
       .use(middleware.auth())
 
@@ -110,10 +106,6 @@ router
     // Common routes
     router.get('/wallet', [WalletsController, 'getWallet'])
     router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
-
-    // User-specific routes
-    router.get('/user/wallet', [WalletsController, 'getUserWallet'])
-    router.get('/user/transactions', [WalletsController, 'getUserTransactions'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())
@@ -148,23 +140,18 @@ router
   .group(() => {
     // Public routes
     router.get('vendors', [VendorsController, 'index'])
-    router.get('vendors/:id', [VendorsController, 'show'])
-    router.get('vendors/:id/reviews', [VendorsController, 'getReviews'])
     router.get('vendors/search/services', [VendorsController, 'searchByServices'])
+    router.get('vendors/listing', [VendorsController, 'vendorListing'])
 
     // Protected routes
     router
       .group(() => {
-        router.post('vendors', [VendorsController, 'store'])
-        router.put('vendors/:id', [VendorsController, 'update'])
-        router.delete('vendors/:id', [VendorsController, 'destroy'])
-
-        // Admin only routes
-        router
-          .group(() => {
-            router.patch('vendors/:id/status', [VendorsController, 'updateStatus'])
-          })
-          .use(middleware.admin())
+        router.group(() => {
+          router.get('/vendors/services', [VendorsController, 'getVendorServices'])
+          router.post('/vendors/services', [VendorsController, 'createVendorService'])
+          router.put('/vendors/services/:id', [VendorsController, 'updateVendorService'])
+          router.delete('/vendors/services/:id', [VendorsController, 'deleteVendorService'])
+        })
       })
       .use(middleware.auth())
   })

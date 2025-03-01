@@ -22,8 +22,8 @@ export const createVendorValidator = vine.compile(
     address: vine.string().optional(),
     location: vine
       .object({
-        lat: vine.number().between(-90, 90),
-        lng: vine.number().between(-180, 180),
+        lat: vine.number().min(-90).max(90),
+        lng: vine.number().min(-180).max(180),
       })
       .optional(),
     social_media: vine
@@ -44,7 +44,9 @@ export const updateVendorValidator = vine.compile(
   vine.object({
     business_name: vine.string().trim().minLength(2).maxLength(100).optional(),
     description: vine.string().trim().optional(),
-    category: vine.enum(['photographer', 'caterer', 'decorator', 'musician', 'venue', 'other']).optional(),
+    category: vine
+      .enum(['photographer', 'caterer', 'decorator', 'musician', 'venue', 'other'])
+      .optional(),
     services: vine.array(vine.string()).optional(),
     portfolio_images: vine
       .array(
@@ -59,8 +61,8 @@ export const updateVendorValidator = vine.compile(
     address: vine.string().optional(),
     location: vine
       .object({
-        lat: vine.number().between(-90, 90),
-        lng: vine.number().between(-180, 180),
+        lat: vine.number().min(-90).max(90),
+        lng: vine.number().min(-180).max(180),
       })
       .optional(),
     social_media: vine
@@ -72,5 +74,27 @@ export const updateVendorValidator = vine.compile(
       })
       .optional(),
     status: vine.enum(['pending', 'active', 'suspended', 'inactive']).optional(),
+  })
+)
+
+export const createVendorServiceValidator = vine.compile(
+  vine.object({
+    name: vine.string().trim().minLength(2).maxLength(100),
+    price: vine.number().min(0),
+    description: vine.string().trim().optional(),
+    category: vine.string().trim().minLength(2).maxLength(100),
+    status: vine.enum(['pending', 'active', 'suspended', 'inactive']).optional(),
+    image: vine.string().url().optional(),
+  })
+)
+
+export const updateVendorServiceValidator = vine.compile(
+  vine.object({
+    name: vine.string().trim().minLength(2).maxLength(100).optional(),
+    price: vine.number().min(0).optional(),
+    description: vine.string().trim().optional(),
+    category: vine.string().trim().minLength(2).maxLength(100).optional(),
+    status: vine.enum(['pending', 'active', 'suspended', 'inactive']).optional(),
+    image: vine.string().url().optional(),
   })
 )

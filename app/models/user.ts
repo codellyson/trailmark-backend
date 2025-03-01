@@ -9,6 +9,11 @@ import hash from '@adonisjs/core/services/hash'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
+export interface Preferences {
+  services: string[]
+  category: string
+}
+
 export default class User extends BaseModel {
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
@@ -67,7 +72,7 @@ export default class User extends BaseModel {
   declare remember_me_token: string | null
 
   @column()
-  declare preferences: Record<string, any>
+  declare preferences: Preferences
 
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime

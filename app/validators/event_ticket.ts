@@ -2,18 +2,12 @@ import vine from '@vinejs/vine'
 
 // Base ticket schema
 export const eventTicketSchema = vine.object({
-  id: vine.number().optional(),
   name: vine.string(),
-  description: vine.string().optional(),
-  type: vine.enum(['general', 'vip', 'early_bird']),
   price: vine.number(),
-  currency: vine.string(),
-  currency_symbol: vine.string(),
-  capacity: vine.number().optional(),
-  status: vine.enum(['draft', 'active', 'sold_out', 'expired']).optional(),
-  event_id: vine.number(),
-  sales_end_date: vine.string(),
-  sales_start_date: vine.string(),
+  capacity: vine.number(),
+  type: vine.string(),
+  is_group_ticket: vine.boolean(),
+  group_size: vine.number(),
 })
 
 // Create ticket validator
@@ -36,6 +30,6 @@ export const updateEventTicketValidator = vine.compile(
 
 export const updateEventTicketStatusValidator = vine.compile(
   vine.object({
-    status: vine.enum(['draft', 'active', 'sold_out', 'expired']),
+    status: vine.enum(['valid', 'used', 'cancelled', 'refunded', 'transferred']),
   })
 )

@@ -56,7 +56,7 @@ export default class AuthController {
       }
 
       await user.load('wallet')
-      await user.load('vendor')
+      // await user.load('vendor')
 
       const token = await User.accessTokens.create(user)
       return response.json({
