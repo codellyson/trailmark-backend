@@ -5,6 +5,7 @@ import { inject } from '@adonisjs/core/container'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 import hash from '@adonisjs/core/services/hash'
+import { updatePasswordValidator, updateUserValidator } from '#validators/auth'
 
 const loginValidator = vine.compile(
   vine.object({
@@ -179,6 +180,110 @@ export default class AuthController {
       },
       error: null,
       meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  // Update User
+  async updateUser({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(updateUserValidator)
+
+    const user = auth.user!
+    user
+      .merge({
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        email: payload.email,
+        avatar_url: payload.avatar_url,
+        bio: payload.bio,
+        social_links: payload.social_links || {
+          instagram: null,
+          facebook: null,
+          twitter: null,
+          linkedin: null,
+          youtube: null,
+          tiktok: null,
+          whatsapp: null,
+        },
+        business_name: payload.business_name,
+        business_description: payload.business_description,
+        business_address: payload.business_address,
+        business_phone_number: payload.business_phone_number,
+        // business_email: payload.business_email,
+        business_website: payload.business_website,
+        business_category: payload.business_category,
+        business_logo: payload.business_logo,
+        business_banner: payload.business_banner,
+        preferences:
+          payload.preferences! ||
+          {
+            receive_email_notifications: false,
+            receive_sms_notifications: false,
+            receive_push_notifications: false,
+            language: 'en',
+            currency: 'NGN',
+          }!,
+      })
+      .save()
+
+    return response.json({
+      success: true,
+      data: user,
+    })
+  }
+  // Update Password
+  async updatePassword({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(updatePasswordValidator)
+
+    const currentPassword = payload.current_password
+    const newPassword = payload.new_password
+    const user = auth.user!
+    const userDetails = await User.find(user.id)
+
+    if (!userDetails) {
+      return response.unauthorized({
+        success: false,
+        data: null,
+        error: { code: 'UNAUTHORIZED', message: 'User not found' },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
+
+    // compare the current password with the user's password
+    const unhashedPassword = await hash.verify(userDetails.password, currentPassword)
+    if (!unhashedPassword) {
+      return response.unauthorized({
+        success: false,
+        data: null,
+        error: { code: 'UNAUTHORIZED', message: 'Invalid current password' },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
+
+    // check if the new password is the same as the current password
+    if (newPassword === currentPassword) {
+      return response.badRequest({
+        success: false,
+        data: null,
+        error: {
+          code: 'BAD_REQUEST',
+          message: 'New password cannot be the same as the current password',
+        },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
+
+    userDetails.password = newPassword
+    await userDetails.save()
+
+    return response.json({ success: true })
+  }
+
+  // Get User
+  async getUser({ auth, response }: HttpContext) {
+    const user = auth.user!
+    return response.json({
+      success: true,
+      data: user,
     })
   }
 }

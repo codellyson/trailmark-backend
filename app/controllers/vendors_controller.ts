@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { inject } from '@adonisjs/core'
-import Vendor from '#models/vendor'
+import Vendor from '#models/event_vendor'
 import {
   createVendorServiceValidator,
   createVendorValidator,
@@ -10,7 +10,9 @@ import {
 import { errors } from '@adonisjs/core'
 import User from '#models/user'
 import VendorService from '#models/vendor_service'
+import Event from '#models/event'
 import { HttpStatusCode } from 'axios'
+import { DateTime } from 'luxon'
 
 @inject()
 export default class VendorsController {
@@ -18,31 +20,53 @@ export default class VendorsController {
    * List all vendors with optional filtering
    */
   async index({ request, response }: HttpContext) {
-    const {
-      page = 1,
-      limit = 10,
-      category,
-      search,
-      sort = 'created_at',
-      order = 'desc',
-    } = request.qs()
+    const page = request.input('page', 1)
+    const limit = request.input('limit', 10)
+    const search = request.input('search')
 
-    const query = User.query().where('role', 'vendor').orderBy(sort, order)
-
-    if (category) {
-      query.where('category', category)
-    }
+    const query = User.query().where('role', 'vendor')
 
     if (search) {
       query.where((builder) => {
         builder
           .where('business_name', 'ILIKE', `%${search}%`)
-          .orWhere('description', 'ILIKE', `%${search}%`)
+          .orWhere('business_description', 'ILIKE', `%${search}%`)
       })
     }
 
-    const vendors = await query.paginate(page, limit)
-    return response.ok(vendors)
+    try {
+      query.preload('vendor_services')
+      const vendors = await query.paginate(page, limit)
+
+      console.log('Vendors:', vendors) // Add this to debug
+
+      return response.json({
+        success: true,
+        data: {
+          // @ts-ignore
+          data: vendors.rows.map((vendor) => ({
+            id: vendor.id,
+            avatar_url: vendor.avatar_url,
+            business_email: vendor.email,
+            business_name: vendor.business_name,
+            status: vendor.status,
+            services: vendor.vendor_services,
+          })),
+          meta: vendors.getMeta(),
+        },
+        error: null,
+      })
+    } catch (error) {
+      console.error('Error fetching vendors:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An error occurred while fetching vendors',
+        },
+      })
+    }
   }
 
   async searchByServices({ request, response }: HttpContext) {
@@ -67,24 +91,25 @@ export default class VendorsController {
   async vendorListing({ request, response }: HttpContext) {
     const { page = 1, limit = 10 } = request.qs()
 
-    const query = User.query().where('role', 'vendor').orderBy('created_at', 'desc')
+    const query = VendorService.query().where('status', 'active')
 
-    const vendors = await query.paginate(page, limit)
+    const vendors = await query.preload('vendor').paginate(page, limit)
 
-    const vendorsWithServices = await Promise.all(
-      vendors.map(async (vendor) => {
-        const services = await VendorService.query().where('user_id', vendor.id)
-        return { services }
-      })
-    )
-
-    const transformedVendors = vendorsWithServices.flatMap((vendor) => {
-      return {
-        services: vendor.services,
-      }
+    return response.json({
+      success: true,
+      data: vendors.rows.map((vendor) => ({
+        id: vendor.id,
+        name: vendor.name,
+        price: vendor.price,
+        price_type: vendor.price_type,
+        description: vendor.description,
+        category: vendor.category,
+        images: vendor.images,
+        features: vendor.features,
+        vendor: vendor.vendor,
+      })),
+      meta: vendors.getMeta(),
     })
-
-    return response.ok(transformedVendors)
   }
 
   async getVendorServices({ request, response, auth }: HttpContext) {
@@ -132,12 +157,32 @@ export default class VendorsController {
       })
     }
 
-    const service = await VendorService.create({
-      ...payload,
-      user_id: vendor.id,
-    })
+    const imagesArray = payload.images?.length! > 0 ? payload.images! : []
+    const featuresArray = payload.features?.length! > 0 ? payload.features! : []
 
-    return response.ok(service)
+    const serviceData = {
+      name: payload.name,
+      price: payload.price,
+      price_type: payload.price_type,
+      description: payload.description,
+      category: payload.category,
+      status: payload.status || 'active',
+      user_id: vendor.id,
+      images: imagesArray,
+      features: featuresArray,
+    }
+
+    const service = await VendorService.create(serviceData)
+
+    return response.ok({
+      success: true,
+      data: {
+        ...service.toJSON(),
+        images: imagesArray,
+        features: featuresArray,
+      },
+      error: null,
+    })
   }
 
   async updateVendorService({ request, response, auth }: HttpContext) {
@@ -152,7 +197,7 @@ export default class VendorsController {
         error: 'Service not found',
       })
     }
-
+    // @ts-ignore
     service.merge(payload)
     await service.save()
 
@@ -176,5 +221,68 @@ export default class VendorsController {
       success: true,
       message: 'Service deleted successfully',
     })
+  }
+
+  //Vendor Events
+  async getUpcomingEvents({ request, response, auth }: HttpContext) {
+    const id = auth.user?.id
+
+    if (!id) {
+      return response.unauthorized({
+        success: false,
+        error: 'Unauthorized',
+      })
+    }
+    // const events = await Event.query().where('user_id', id).where('start_date', '>', DateTime.now())
+
+    // return events that are upcoming and the vendor is a vendor for the event
+    const events = await Event.query()
+      .where('user_id', id)
+      .where('start_date', '>', DateTime.now().toSQL())
+      .whereHas('vendors', (builder) => builder.where('user_id', id))
+
+    return response.ok(events)
+  }
+
+  async getPastEvents({ request, response, auth }: HttpContext) {
+    const id = auth.user?.id
+
+    if (!id) {
+      return response.unauthorized({
+        success: false,
+        error: 'Unauthorized',
+      })
+    }
+
+    // return events that are past and the vendor is a vendor for the event
+    const events = await Event.query()
+      .where('user_id', id)
+      .where('start_date', '<', DateTime.now().toSQL())
+      .whereHas('vendors', (builder) => builder.where('user_id', id))
+
+    return response.ok(events)
+  }
+
+  async getVendorEvent({ request, response, auth }: HttpContext) {
+    const { id } = request.params()
+    const event = await Event.find(id)
+    const vendor = await User.find(auth.user?.id)
+    event?.load('vendors')
+
+    if (!event || !vendor) {
+      return response.notFound({
+        success: false,
+        error: 'Event or vendor not found',
+      })
+    }
+
+    if (!vendor) {
+      return response.notFound({
+        success: false,
+        error: 'Vendor not found',
+      })
+    }
+
+    return response.ok(event)
   }
 }

@@ -4,16 +4,18 @@ import vine from '@vinejs/vine'
 export const eventTicketSchema = vine.object({
   name: vine.string(),
   price: vine.number(),
-  capacity: vine.number(),
-  type: vine.string(),
-  is_group_ticket: vine.boolean(),
+  quantity: vine.enum(['limited', 'unlimited']),
+  limit: vine.number(),
+  type: vine.enum(['free', 'paid', 'invite-only']),
+  description: vine.string(),
+  perks: vine.array(vine.string()),
   group_size: vine.number(),
 })
 
 // Create ticket validator
 export const createEventTicketValidator = vine.compile(
   vine.object({
-    data: vine.array(eventTicketSchema),
+    data: eventTicketSchema,
   })
 )
 

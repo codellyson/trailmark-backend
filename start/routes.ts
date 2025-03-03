@@ -9,6 +9,7 @@ const WalletsController = () => import('#controllers/wallets_controller')
 const StatsController = () => import('#controllers/stats_controller')
 const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
+
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router
@@ -20,6 +21,16 @@ router
   })
   .prefix('/api/v1')
 
+// Protected Auth Routes
+router
+  .group(() => {
+    router.put('/auth/update-profile', [AuthController, 'updateUser']).use(middleware.auth())
+    router.put('/auth/update-password', [AuthController, 'updatePassword']).use(middleware.auth())
+    router.get('/auth/profile', [AuthController, 'getUser']).use(middleware.auth())
+  })
+  .prefix('/api/v1')
+  .use(middleware.auth())
+
 // Event Routes
 router
   .group(() => {
@@ -29,6 +40,15 @@ router
     router.get('/events/public/:id', [EventsController, 'getPublicEvent'])
     router.post('/events', [EventsController, 'createEvent']).use(middleware.auth())
     router.delete('/events/:id', [EventsController, 'deleteEvent']).use(middleware.auth())
+    router.post('/events/:id/vendor-applications', [EventsController, 'createVendorApplication'])
+    router.get('/events/:id/vendor-applications', [EventsController, 'getVendorApplications'])
+    router.post('/events/generate-vendor-payment-link', [
+      EventsController,
+      'generateVendorPaymentLink',
+    ])
+    router
+      .post('/events/:id/tickets', [EventsController, 'createEventTicket'])
+      .use(middleware.auth())
     router
       .get('/generate-apple-ticket-pass/:bookingId', [EventsController, 'generateAppleTicketPass'])
       .use(middleware.auth())
@@ -38,6 +58,8 @@ router
 // Event Ticket routes
 router
   .group(() => {
+    router.get('/events/:eventId', [EventsController, 'getEvent']).use(middleware.auth())
+
     router
       .post('/events/:eventId/tickets', [EventsController, 'createEventTicket'])
       .use(middleware.auth())
@@ -52,34 +74,6 @@ router
 
     router
       .delete('/events/:eventId/tickets/:id', [EventsController, 'deleteEventTicket'])
-      .use(middleware.auth())
-
-    router
-      .put('/events/:eventId/tickets/:id/status', [EventsController, 'updateEventTicketStatus'])
-      .use(middleware.auth())
-  })
-  .prefix('/api/v1')
-
-// Booking routes
-router
-  .group(() => {
-    // Get all bookings (admin only)
-    router.get('/bookings', [BookingsController, 'index']).use(middleware.auth())
-
-    // Get user's bookings
-    router.get('/user/bookings', [BookingsController, 'userBookings']).use(middleware.auth())
-
-    // Get organizer's event bookings
-    router
-      .get('/events/:eventId/bookings', [BookingsController, 'organizerEventBookings'])
-      .use(middleware.auth())
-
-    // Get booking details
-    router.get('/bookings/:id', [BookingsController, 'show']).use(middleware.auth())
-
-    // Get booking statistics
-    router
-      .get('/events/:eventId/booking-statistics', [BookingsController, 'getStatistics'])
       .use(middleware.auth())
   })
   .prefix('/api/v1')
@@ -140,7 +134,7 @@ router
   .group(() => {
     // Public routes
     router.get('vendors', [VendorsController, 'index'])
-    router.get('vendors/search/services', [VendorsController, 'searchByServices'])
+    router.get('vendors/services/search', [VendorsController, 'searchByServices'])
     router.get('vendors/listing', [VendorsController, 'vendorListing'])
 
     // Protected routes
@@ -151,9 +145,15 @@ router
           router.post('/vendors/services', [VendorsController, 'createVendorService'])
           router.put('/vendors/services/:id', [VendorsController, 'updateVendorService'])
           router.delete('/vendors/services/:id', [VendorsController, 'deleteVendorService'])
+
+          // vendor events
+          router.get('/vendors/events/upcoming', [VendorsController, 'getUpcomingEvents'])
+          router.get('/vendors/events/past', [VendorsController, 'getPastEvents'])
+          router.get('/vendors/events/:id', [VendorsController, 'getVendorEvent'])
         })
       })
       .use(middleware.auth())
+      .use(middleware.vendor())
   })
   .prefix('/api/v1')
 

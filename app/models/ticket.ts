@@ -19,10 +19,16 @@ export default class Ticket extends BaseModel {
   declare price: number
 
   @column()
-  declare capacity: number
+  declare quantity: 'limited' | 'unlimited'
 
   @column()
-  declare type: 'general' | 'vip' | 'early_bird' | 'group'
+  declare limit: number
+
+  @column()
+  declare quantity_sold: number
+
+  @column()
+  declare type: 'free' | 'paid' | 'invite-only'
 
   @column()
   declare description?: string
@@ -34,9 +40,6 @@ export default class Ticket extends BaseModel {
   declare group_size?: number
 
   @column()
-  declare tickets_sold: number
-
-  @column()
   declare event_id: string
 
   @column.dateTime({ autoCreate: true })
@@ -45,7 +48,9 @@ export default class Ticket extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
 
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+  })
   declare event: BelongsTo<typeof Event>
 
   @beforeCreate()

@@ -7,7 +7,7 @@ export const createVendorValidator = vine.compile(
   vine.object({
     business_name: vine.string().trim().minLength(2).maxLength(100),
     description: vine.string().trim().optional(),
-    category: vine.enum(['photographer', 'caterer', 'decorator', 'musician', 'venue', 'other']),
+    category: vine.string(),
     services: vine.array(vine.string()).optional(),
     portfolio_images: vine
       .array(
@@ -44,9 +44,7 @@ export const updateVendorValidator = vine.compile(
   vine.object({
     business_name: vine.string().trim().minLength(2).maxLength(100).optional(),
     description: vine.string().trim().optional(),
-    category: vine
-      .enum(['photographer', 'caterer', 'decorator', 'musician', 'venue', 'other'])
-      .optional(),
+    category: vine.string().optional(),
     services: vine.array(vine.string()).optional(),
     portfolio_images: vine
       .array(
@@ -81,10 +79,12 @@ export const createVendorServiceValidator = vine.compile(
   vine.object({
     name: vine.string().trim().minLength(2).maxLength(100),
     price: vine.number().min(0),
+    price_type: vine.enum(['fixed', 'hourly', 'daily', 'per_person']),
     description: vine.string().trim().optional(),
     category: vine.string().trim().minLength(2).maxLength(100),
     status: vine.enum(['pending', 'active', 'suspended', 'inactive']).optional(),
-    image: vine.string().url().optional(),
+    images: vine.array(vine.string().url()).optional(),
+    features: vine.array(vine.string()).optional(),
   })
 )
 
@@ -92,9 +92,11 @@ export const updateVendorServiceValidator = vine.compile(
   vine.object({
     name: vine.string().trim().minLength(2).maxLength(100).optional(),
     price: vine.number().min(0).optional(),
+    price_type: vine.enum(['fixed', 'hourly', 'daily', 'per_person']).optional(),
     description: vine.string().trim().optional(),
     category: vine.string().trim().minLength(2).maxLength(100).optional(),
     status: vine.enum(['pending', 'active', 'suspended', 'inactive']).optional(),
-    image: vine.string().url().optional(),
+    images: vine.array(vine.string().url()).optional(),
+    features: vine.array(vine.string()).optional(),
   })
 )

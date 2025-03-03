@@ -14,7 +14,9 @@ import { v4 as uuidv4 } from 'uuid'
 import User from './user.js'
 
 import Ticket from './ticket.js'
-import Vendor from './vendor.js'
+import Vendor from './event_vendor.js'
+import EventVendor from './event_vendor.js'
+import VendorService from './vendor_service.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
@@ -117,11 +119,24 @@ export default class Event extends BaseModel {
     facebook_url?: string
   }
 
-  @column()
+  @column({
+    prepare: (value: string[]) => (Array.isArray(value) ? JSON.stringify(value) : value),
+    consume: (value: string) => {
+      if (!value) return []
+      return typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))
+        ? JSON.parse(value)
+        : [value]
+    },
+  })
   declare thumbnails: { url: string; key: string }[]
 
   @column()
   declare user_id: string
+
+  @belongsTo(() => User, {
+    foreignKey: 'user_id',
+  })
+  declare user: BelongsTo<typeof User>
 
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
@@ -129,24 +144,18 @@ export default class Event extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
 
-  @hasMany(() => Ticket)
+  @hasMany(() => Ticket, {
+    foreignKey: 'event_id',
+  })
   declare tickets: HasMany<typeof Ticket>
 
-  @manyToMany(() => Vendor, {
-    pivotTable: 'event_vendors',
-    pivotColumns: [
-      'status',
-      'notes',
-      'services',
-      'agreed_price',
-      'booth_location',
-      'booth_number',
-      'setup_time',
-      'teardown_time',
-    ],
+  @hasMany(() => EventVendor, {
+    foreignKey: 'event_id',
   })
-  declare vendors: ManyToMany<typeof Vendor>
+  declare vendors: HasMany<typeof EventVendor>
 
-  @belongsTo(() => User)
-  declare user: BelongsTo<typeof User>
+  @hasMany(() => VendorService, {
+    foreignKey: 'user_id',
+  })
+  declare services: HasMany<typeof VendorService>
 }

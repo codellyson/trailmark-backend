@@ -3,16 +3,12 @@ import { BaseModel, column, SnakeCaseNamingStrategy, hasOne, hasMany } from '@ad
 import { DateTime } from 'luxon'
 import type { HasOne, HasMany } from '@adonisjs/lucid/types/relations'
 import Wallet from './wallet.js'
-import Vendor from './vendor.js'
+import Vendor from './event_vendor.js'
 import { beforeSave } from '@adonisjs/lucid/orm'
 import hash from '@adonisjs/core/services/hash'
+import VendorService from './vendor_service.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
-
-export interface Preferences {
-  services: string[]
-  category: string
-}
 
 export default class User extends BaseModel {
   static accessTokens = DbAccessTokensProvider.forModel(User)
@@ -54,10 +50,33 @@ export default class User extends BaseModel {
   declare business_address: string | null
 
   @column()
+  declare business_category: string | null
+
+  @column()
   declare business_phone_number: string | null
 
   @column()
   declare business_website: string | null
+
+  @column()
+  declare business_description: string | null
+
+  @column()
+  declare business_logo: string | null
+
+  @column()
+  declare business_banner: string | null
+
+  @column()
+  declare social_links?: {
+    instagram: string | null
+    facebook: string | null
+    twitter: string | null
+    linkedin: string | null
+    youtube: string | null
+    tiktok: string | null
+    whatsapp: string | null
+  }
 
   @column()
   declare status: 'active' | 'inactive' | 'suspended'
@@ -72,7 +91,13 @@ export default class User extends BaseModel {
   declare remember_me_token: string | null
 
   @column()
-  declare preferences: Preferences
+  declare preferences?: {
+    receive_email_notifications: boolean
+    receive_sms_notifications: boolean
+    receive_push_notifications: boolean
+    language: string
+    currency: string
+  }
 
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
@@ -94,6 +119,16 @@ export default class User extends BaseModel {
     foreignKey: 'user_id',
   })
   declare vendor: HasOne<typeof Vendor>
+
+  @hasMany(() => VendorService, {
+    foreignKey: 'user_id',
+  })
+  declare vendor_services: HasMany<typeof VendorService>
+
+  @hasOne(() => VendorService, {
+    foreignKey: 'user_id',
+  })
+  declare vendor_service: HasOne<typeof VendorService>
 
   @beforeSave()
   static async hashPassword(user: User) {

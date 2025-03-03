@@ -34,6 +34,10 @@ export default class extends BaseSchema {
       table.string('registration_number').nullable()
       table.boolean('is_business_verified').defaultTo(false)
       table.timestamp('business_verified_at').nullable()
+      table.string('business_category').nullable()
+      table.string('business_logo').nullable()
+      table.string('business_banner').nullable()
+      table.jsonb('business_social_media').defaultTo('{}')
 
       // Verification
       table.boolean('is_email_verified').defaultTo(false)

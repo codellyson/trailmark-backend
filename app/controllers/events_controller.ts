@@ -1,7 +1,12 @@
 import Event from '#models/event'
 import Ticket, { TicketStatus, TicketType } from '#models/ticket'
 import User from '#models/user'
-import { createEventValidator, updateEventValidator } from '#validators/event'
+import {
+  createEventValidator,
+  createVendorApplicationValidator,
+  generateVendorPaymentLinkValidator,
+  updateEventValidator,
+} from '#validators/event'
 import { createAddonValidator } from '#validators/event_add_on'
 import {
   createEventTicketValidator,
@@ -14,7 +19,9 @@ import Booking from '#models/booking'
 import { inject } from '@adonisjs/core'
 import TicketPassService from '#services/ticket_pass_service'
 import { generateQRCode, generateTicketNumber } from '../utils/ticket.js'
-import Vendor from '#models/vendor'
+import Vendor from '#models/event_vendor'
+import EventVendor from '#models/event_vendor'
+import VendorService from '#models/vendor_service'
 
 @inject()
 export default class EventsController {
@@ -93,24 +100,63 @@ export default class EventsController {
         show_countdown: payload.theme_settings?.show_countdown,
       },
       user_id: auth.user?.id.toString(),
-      vendor,
     })
-  }
-
-  /**
-   * Get event details
-   */
-  async getEvent({ params, response }: HttpContext) {
-    console.log({ params })
-    const event = await Event.query().where('slug', params.id).firstOrFail()
-    await event?.load('user')
-    await event?.load('tickets')
 
     return response.json({
       success: true,
       data: event,
       error: null,
       meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  /**
+   * Get event details
+   */
+  public async getEvent({ params, response }: HttpContext) {
+    const event = await Event.query().where('id', params.id).firstOrFail()
+    await event?.load('user')
+    await event?.load('tickets')
+    await event?.load('vendors')
+    const services = await VendorService.query().whereIn(
+      'user_id',
+      event.vendors.map((vendor) => vendor.vendor_id)
+    )
+
+    return response.json({
+      success: true,
+      data: {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        custom_url: event.custom_url,
+        event_category: event.event_category,
+        event_type: event.event_type,
+        event_frequency: event.event_frequency,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        timezone: event.timezone,
+        location: event.location,
+        capacity: event.capacity,
+        status: event.status,
+        theme_settings: event.theme_settings,
+        social_details: event.social_details,
+        thumbnails: event.thumbnails,
+        user: event.user,
+        tickets: event.tickets,
+        vendor_services: event.vendors.map((vendor) => ({
+          ...vendor.toJSON(),
+          service_details: services.filter(
+            (s) =>
+              s.user_id.toString() === vendor.vendor_id.toString() &&
+              s.id.toString() === vendor.service_id.toString()
+          )[0],
+        })),
+        created_at: event.created_at,
+        updated_at: event.updated_at,
+      },
     })
   }
 
@@ -129,10 +175,15 @@ export default class EventsController {
    * Update event details
    */
   async updateEvent({ params, request, response, auth }: HttpContext) {
-    const event = await Event.findOrFail(params.id)
+    const eventId = params.id
+    const event = await Event.query().where('id', eventId).firstOrFail()
 
+    console.log({
+      userID: auth.user!.id.toString(),
+      eventUserID: event.user_id,
+    })
     // Check if user is authorized
-    if (event.user_id !== auth.user!.id.toString()) {
+    if (event.user_id.toString() !== auth.user!.id.toString()) {
       return response.forbidden({
         success: false,
         data: null,
@@ -183,26 +234,6 @@ export default class EventsController {
     })
   }
 
-  async createEventTicket({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(createEventTicketValidator)
-    const params = request.params()
-    const event = await Event.findOrFail(params.eventId)
-
-    const tickets = []
-
-    return response.json({
-      success: true,
-      data: [],
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
-  }
-
-  async isValidPhotographer(photographerId: number) {
-    const photographer = await User.find(photographerId)
-    return photographer !== null
-  }
-
   async getEventTickets({ request, response, auth }: HttpContext) {
     const params = request.params()
     const event = await Event.findOrFail(params.eventId)
@@ -245,10 +276,98 @@ export default class EventsController {
     })
   }
 
-  async updateEventTicketStatus({ request, response, auth }: HttpContext) {
+  async createVendorApplication({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(createVendorApplicationValidator)
+    const vendors = payload.vendors
     const params = request.params()
-    const payload = await request.validateUsing(updateEventTicketStatusValidator)
-    const ticket = await Ticket.findOrFail(params.id)
+    const event = await Event.findOrFail(params.id)
+
+    try {
+      // Check for existing vendor applications first
+      const existingVendors = await EventVendor.query()
+        .where('event_id', event.id)
+        .whereIn(
+          'vendor_id',
+          vendors.map((v) => v.vendor_id)
+        )
+
+      if (existingVendors.length > 0) {
+        return response.conflict({
+          success: false,
+          data: null,
+          error: {
+            code: 'DUPLICATE_VENDOR',
+            message: 'One or more vendors are already registered for this event',
+            vendors: existingVendors.map((v) => v.vendor_id),
+          },
+          meta: { timestamp: new Date().toISOString() },
+        })
+      }
+
+      const vendorApplication = await EventVendor.createMany(
+        vendors.map((vendor) => ({
+          event_id: event.id,
+          ...vendor,
+          setup_time: DateTime.fromISO(vendor.setup_time),
+          teardown_time: DateTime.fromISO(vendor.teardown_time),
+        }))
+      )
+
+      return response.json({
+        success: true,
+        data: vendorApplication,
+        error: null,
+        meta: { timestamp: new Date().toISOString() },
+      })
+    } catch (error) {
+      // Handle other potential errors
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'SERVER_ERROR',
+          message: 'Failed to create vendor application',
+        },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
+  }
+
+  async getVendorApplications({ request, response, auth }: HttpContext) {
+    const params = request.params()
+    const event = await Event.findOrFail(params.eventId)
+    const vendorApplications = await EventVendor.query().where('event_id', event.id)
+    return response.json({
+      success: true,
+      data: vendorApplications,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async generateVendorPaymentLink({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(generateVendorPaymentLinkValidator)
+    const params = request.params()
+    const event = await Event.findOrFail(params.eventId)
+    const vendorApplication = await EventVendor.findOrFail(params.id)
+    return response.json({
+      success: true,
+      data: vendorApplication,
+      error: null,
+      meta: { timestamp: new Date().toISOString() },
+    })
+  }
+
+  async createEventTicket({ request, response, auth }: HttpContext) {
+    const payload = await request.validateUsing(createEventTicketValidator)
+    const data = payload.data
+    const params = request.params()
+    const event = await Event.findOrFail(params.id)
+    console.log({ payload })
+    const ticket = await Ticket.create({
+      ...data,
+      event_id: event.id,
+    })
 
     return response.json({
       success: true,
