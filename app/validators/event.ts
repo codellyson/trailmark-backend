@@ -32,7 +32,7 @@ export const createEventValidator = vine.compile(
     theme_settings: vine.object({
       template: vine.enum([
         'default',
-        'minimalist',
+        'minimal',
         'modern',
         'classic',
         'elegant',
@@ -92,7 +92,7 @@ export const updateEventValidator = vine.compile(
         template: vine
           .enum([
             'default',
-            'minimalist',
+            'minimal',
             'modern',
             'classic',
             'elegant',

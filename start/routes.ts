@@ -46,9 +46,9 @@ router
       EventsController,
       'generateVendorPaymentLink',
     ])
-    router
-      .post('/events/:id/tickets', [EventsController, 'createEventTicket'])
-      .use(middleware.auth())
+    // router
+    //   .post('/events/:id/tickets', [EventsController, 'createEventTicket'])
+    //   .use(middleware.auth())
     router
       .get('/generate-apple-ticket-pass/:bookingId', [EventsController, 'generateAppleTicketPass'])
       .use(middleware.auth())

@@ -23,7 +23,7 @@ BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 export interface ThemeSettings {
   template:
     | 'default'
-    | 'minimalist'
+    | 'minimal'
     | 'modern'
     | 'classic'
     | 'elegant'
@@ -34,7 +34,7 @@ export interface ThemeSettings {
     | 'gothic'
     | 'boho'
     | 'hipster'
-    | 'minimalist'
+    | 'minimal'
     | 'modern'
     | 'classic'
     | 'elegant'

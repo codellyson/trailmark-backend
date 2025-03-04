@@ -118,10 +118,12 @@ export default class EventsController {
     await event?.load('user')
     await event?.load('tickets')
     await event?.load('vendors')
-    const services = await VendorService.query().whereIn(
-      'user_id',
-      event.vendors.map((vendor) => vendor.vendor_id)
-    )
+    const services = await VendorService.query()
+      .whereIn(
+        'user_id',
+        event.vendors.map((vendor) => vendor.vendor_id)
+      )
+      .preload('vendor')
 
     return response.json({
       success: true,
@@ -362,11 +364,12 @@ export default class EventsController {
     const payload = await request.validateUsing(createEventTicketValidator)
     const data = payload.data
     const params = request.params()
-    const event = await Event.findOrFail(params.id)
+    console.log({ params })
     console.log({ payload })
+    const event = await Event.findOrFail(params.eventId)
     const ticket = await Ticket.create({
       ...data,
-      event_id: event.id,
+      event_id: Number.parseInt(event.id),
     })
 
     return response.json({
