@@ -90,9 +90,7 @@ export default class VendorsController {
 
   async vendorListing({ request, response }: HttpContext) {
     const { page = 1, limit = 10 } = request.qs()
-
     const query = VendorService.query().where('status', 'active')
-
     const vendors = await query.preload('vendor').paginate(page, limit)
 
     return response.json({
@@ -114,9 +112,7 @@ export default class VendorsController {
 
   async getVendorServices({ request, response, auth }: HttpContext) {
     const id = auth.user?.id
-
     const services = await VendorService.query().where('user_id', id!)
-
     return response.status(HttpStatusCode.Ok).json({
       success: true,
       data: services,
@@ -226,7 +222,7 @@ export default class VendorsController {
   //Vendor Events
   async getUpcomingEvents({ request, response, auth }: HttpContext) {
     const id = auth.user?.id
-
+    console.log(id)
     if (!id) {
       return response.unauthorized({
         success: false,
@@ -237,9 +233,9 @@ export default class VendorsController {
 
     // return events that are upcoming and the vendor is a vendor for the event
     const events = await Event.query()
-      .where('user_id', id)
+      .where('user_id', Number(id))
       .where('start_date', '>', DateTime.now().toSQL())
-      .whereHas('vendors', (builder) => builder.where('user_id', id))
+      .whereHas('vendors', (builder) => builder.where('user_id', Number(id)))
 
     return response.ok(events)
   }

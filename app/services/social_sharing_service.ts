@@ -12,7 +12,7 @@ export default class SocialSharingService {
    * Generate social media share links for an event
    */
   public async generateShareLinks(event: Event) {
-    const eventUrl = `${env.get('APP_URL')}/events/${event.slug}`
+    const eventUrl = `${env.get('APP_URL')}/events/${event.custom_url || event.id}`
     const encodedUrl = encodeURIComponent(eventUrl)
     const encodedTitle = encodeURIComponent(event.title)
     const encodedDescription = encodeURIComponent(event.description)
@@ -30,7 +30,7 @@ export default class SocialSharingService {
    * Generate social media preview card metadata for an event
    */
   public async generatePreviewCard(event: Event) {
-    const eventUrl = `${env.get('APP_URL')}/events/${event.slug}`
+    const eventUrl = `${env.get('APP_URL')}/events/${event.custom_url || event.id}`
     const thumbnailUrl = event.thumbnails?.[0]?.url || ''
 
     return {
@@ -68,23 +68,23 @@ export default class SocialSharingService {
     const shareUrl = shareLinks[platform]
 
     // Update social metrics
-    const metrics = event.socialMetrics ?? {
-      facebook: { shares: 0 },
-      twitter: { shares: 0 },
-      instagram: { shares: 0 },
-      whatsapp: { shares: 0 },
+    const metrics = event.social_metrics ?? {
+      facebook: { shares: 0, views: 0, clicks: 0 },
+      twitter: { shares: 0, views: 0, clicks: 0 },
+      instagram: { shares: 0, views: 0, clicks: 0 },
+      whatsapp: { shares: 0, views: 0, clicks: 0 },
     }
 
     if (!metrics[platform]) {
-      metrics[platform] = { shares: 0 }
+      metrics[platform] = { shares: 0, views: 0, clicks: 0 }
     }
 
     metrics[platform].shares += 1
-    await event.merge({ socialMetrics: metrics }).save()
+    await event.merge({ social_metrics: metrics }).save()
 
     return {
       shareUrl,
-      metrics: event.socialMetrics,
+      metrics: event.social_metrics,
     }
   }
 
@@ -92,16 +92,11 @@ export default class SocialSharingService {
    * Generate a QR code for sharing the event
    */
   public async generateEventQR(event: Event) {
-    const eventUrl = `${env.get('APP_URL')}/events/${event.slug}`
+    const eventUrl = `${env.get('APP_URL')}/events/${event.custom_url || event.id}`
     return await generateQRCode(eventUrl)
   }
 
   /**
    * Update event's social share metadata
    */
-  public async updateSocialShareMetadata(event: Event) {
-    const previewCard = await this.generatePreviewCard(event)
-    await event.merge({ socialShare: previewCard }).save()
-    return previewCard
-  }
 }

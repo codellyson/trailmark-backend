@@ -60,9 +60,9 @@ export default class SocialSharingController {
   /**
    * Update social share metadata for an event
    */
-  public async updateShareMetadata({ params, response }: HttpContext) {
-    const event = await Event.findOrFail(params.id)
-    const metadata = await this.socialSharingService.updateSocialShareMetadata(event)
-    return response.ok(metadata)
-  }
+  // public async updateShareMetadata({ params, response }: HttpContext) {
+  //   const event = await Event.findOrFail(params.id)
+  //   const metadata = await this.socialSharingService.updateSocialShareMetadata(event)
+  //   return response.ok(metadata)
+  // }
 }

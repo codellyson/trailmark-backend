@@ -99,6 +99,9 @@ export default class Event extends BaseModel {
   declare status: 'draft' | 'published' | 'cancelled'
 
   @column()
+  declare user_id: number
+
+  @column()
   declare theme_settings: {
     template: string
     primary_color: string
@@ -119,6 +122,14 @@ export default class Event extends BaseModel {
     facebook_url?: string
   }
 
+  @column()
+  declare social_metrics: {
+    facebook: { shares: number; views: number; clicks: number }
+    twitter: { shares: number; views: number; clicks: number }
+    instagram: { shares: number; views: number; clicks: number }
+    whatsapp: { shares: number; views: number; clicks: number }
+  }
+
   @column({
     prepare: (value: string[]) => (Array.isArray(value) ? JSON.stringify(value) : value),
     consume: (value: string) => {
@@ -129,9 +140,6 @@ export default class Event extends BaseModel {
     },
   })
   declare thumbnails: { url: string; key: string }[]
-
-  @column()
-  declare user_id: string
 
   @belongsTo(() => User, {
     foreignKey: 'user_id',

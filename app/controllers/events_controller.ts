@@ -99,7 +99,7 @@ export default class EventsController {
         hero_layout: payload.theme_settings?.hero_layout,
         show_countdown: payload.theme_settings?.show_countdown,
       },
-      user_id: auth.user?.id.toString(),
+      user_id: Number(auth.user?.id),
     })
 
     return response.json({
@@ -163,14 +163,50 @@ export default class EventsController {
   }
 
   async getPublicEvent({ params, response }: HttpContext) {
-    const event = await Event.query().where('slug', params.id).firstOrFail()
+    const event = await Event.query().where('custom_url', params.id).firstOrFail()
     await event?.load('user')
     await event?.load('tickets')
+    await event?.load('vendors')
+    const services = await VendorService.query()
+      .whereIn(
+        'user_id',
+        event.vendors.map((vendor) => vendor.vendor_id)
+      )
+      .preload('vendor')
+
     return response.json({
       success: true,
-      data: event,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
+      data: {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        custom_url: event.custom_url,
+        event_category: event.event_category,
+        event_type: event.event_type,
+        event_frequency: event.event_frequency,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        timezone: event.timezone,
+        location: event.location,
+        capacity: event.capacity,
+        status: event.status,
+        theme_settings: event.theme_settings,
+        social_details: event.social_details,
+        thumbnails: event.thumbnails,
+        user: event.user,
+        tickets: event.tickets,
+        vendor_services: event.vendors.map((vendor) => ({
+          ...vendor.toJSON(),
+          service_details: services.filter(
+            (s) =>
+              s.user_id.toString() === vendor.vendor_id.toString() &&
+              s.id.toString() === vendor.service_id.toString()
+          )[0],
+        })),
+        created_at: event.created_at,
+      },
     })
   }
   /**
@@ -214,7 +250,7 @@ export default class EventsController {
   async deleteEvent({ params, response, auth }: HttpContext) {
     const event = await Event.findOrFail(params.id)
 
-    if (event.user_id !== auth.user!.id.toString()) {
+    if (event.user_id !== Number(auth.user!.id)) {
       return response.forbidden({
         success: false,
         data: null,
@@ -380,6 +416,13 @@ export default class EventsController {
     })
   }
 
+  async getUpcomingEvents({ request, response }: HttpContext) {
+    const events = await Event.query().where('start_date', '>', DateTime.now().toISO())
+    return response.json({
+      success: true,
+      data: events,
+    })
+  }
   async generateAppleTicketPass({ params, response }: HttpContext) {
     const booking = await Booking.findOrFail(params.bookingId)
     await booking.load('event')

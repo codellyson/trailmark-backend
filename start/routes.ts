@@ -35,6 +35,7 @@ router
 router
   .group(() => {
     router.get('/events', [EventsController, 'getEvents'])
+    router.get('/events/upcoming', [EventsController, 'getUpcomingEvents'])
     router.put('/events/:id', [EventsController, 'updateEvent']).use(middleware.auth())
     router.get('/events/:id', [EventsController, 'getEvent']).use(middleware.auth())
     router.get('/events/public/:id', [EventsController, 'getPublicEvent'])
@@ -143,17 +144,17 @@ router
         router.group(() => {
           router.get('/vendors/services', [VendorsController, 'getVendorServices'])
           router.post('/vendors/services', [VendorsController, 'createVendorService'])
-          router.put('/vendors/services/:id', [VendorsController, 'updateVendorService'])
-          router.delete('/vendors/services/:id', [VendorsController, 'deleteVendorService'])
-
           // vendor events
           router.get('/vendors/events/upcoming', [VendorsController, 'getUpcomingEvents'])
           router.get('/vendors/events/past', [VendorsController, 'getPastEvents'])
+          router.put('/vendors/services/:id', [VendorsController, 'updateVendorService'])
+          router.delete('/vendors/services/:id', [VendorsController, 'deleteVendorService'])
           router.get('/vendors/events/:id', [VendorsController, 'getVendorEvent'])
         })
       })
       .use(middleware.auth())
       .use(middleware.vendor())
+    // .use(middleware.admin())
   })
   .prefix('/api/v1')
 
@@ -164,6 +165,9 @@ router
     router.get('/events/:id/preview-card', [SocialSharingController, 'getPreviewCard'])
     router.post('/events/:id/share', [SocialSharingController, 'shareEvent'])
     router.get('/events/:id/qr-code', [SocialSharingController, 'generateQR'])
-    router.post('/events/:id/share-metadata', [SocialSharingController, 'updateShareMetadata'])
   })
   .prefix('/api/v1')
+
+router.group(() => {
+  router.get('/events/upcoming', [EventsController, 'getUpcomingEvents'])
+})
