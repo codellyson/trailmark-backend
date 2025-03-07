@@ -6,7 +6,7 @@ export default class VendorMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
     const user = ctx.auth.user
     if (!user || !user.role || user.role !== 'vendor') {
-      throw new errors.E_UNAUTHORIZED_ACCESS('Vendor access required')
+      throw new Error('Vendor access required')
     }
 
     return next()

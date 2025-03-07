@@ -41,7 +41,7 @@ export default class User extends BaseModel {
   declare role: 'user' | 'vendor' | 'admin'
 
   @column()
-  declare phone_number: string | null
+  declare phone: string | null
 
   @column()
   declare business_name: string | null
@@ -82,7 +82,7 @@ export default class User extends BaseModel {
   declare status: 'active' | 'inactive' | 'suspended'
 
   @column()
-  declare email_verified: boolean
+  declare is_email_verified: boolean
 
   @column()
   declare email_verified_at: DateTime | null

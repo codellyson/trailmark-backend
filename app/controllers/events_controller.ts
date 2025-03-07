@@ -30,13 +30,14 @@ export default class EventsController {
   /**
    * List all events with optional filters
    */
-  async getEvents({ request, response }: HttpContext) {
+  async getEvents({ request, response, auth }: HttpContext) {
     const page = request.input('page', 1)
     const limit = request.input('limit', 10)
     const status = request.input('status')
     const dateRange = request.input('date_range')
-
+    console.log({ user: auth.user })
     const query = Event.query()
+      .where('user_id', auth.user!.id)
       .preload('tickets')
       .if(status, (q) => q.where('status', status))
       .if(dateRange, (q) => {
@@ -145,7 +146,7 @@ export default class EventsController {
         status: event.status,
         theme_settings: event.theme_settings,
         social_details: event.social_details,
-        thumbnails: event.thumbnails,
+        thumbnails: event.thumbnails.flat(),
         user: event.user,
         tickets: event.tickets,
         vendor_services: event.vendors.map((vendor) => ({
@@ -262,7 +263,7 @@ export default class EventsController {
       })
     }
 
-    await event.merge({ status: 'cancelled' }).save()
+    await event.merge({ status: 'draft' }).save()
 
     return response.json({
       success: true,
@@ -344,7 +345,7 @@ export default class EventsController {
 
       const vendorApplication = await EventVendor.createMany(
         vendors.map((vendor) => ({
-          event_id: event.id,
+          event_id: event.id.toString(),
           ...vendor,
           setup_time: DateTime.fromISO(vendor.setup_time),
           teardown_time: DateTime.fromISO(vendor.teardown_time),
@@ -405,7 +406,7 @@ export default class EventsController {
     const event = await Event.findOrFail(params.eventId)
     const ticket = await Ticket.create({
       ...data,
-      event_id: Number.parseInt(event.id),
+      event_id: event.id,
     })
 
     return response.json({
@@ -416,8 +417,12 @@ export default class EventsController {
     })
   }
 
-  async getUpcomingEvents({ request, response }: HttpContext) {
-    const events = await Event.query().where('start_date', '>', DateTime.now().toISO())
+  async getUpcomingEvents({ request, response, auth }: HttpContext) {
+    const events = await Event.query()
+      .where('user_id', auth.user!.id)
+      .where('start_date', '>', DateTime.now().toISO())
+      .orderBy('start_date', 'asc')
+
     return response.json({
       success: true,
       data: events,

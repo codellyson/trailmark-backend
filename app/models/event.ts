@@ -9,10 +9,8 @@ import {
 } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
-import { v4 as uuidv4 } from 'uuid'
 
 import User from './user.js'
-
 import Ticket from './ticket.js'
 import Vendor from './event_vendor.js'
 import EventVendor from './event_vendor.js'
@@ -34,17 +32,6 @@ export interface ThemeSettings {
     | 'gothic'
     | 'boho'
     | 'hipster'
-    | 'minimal'
-    | 'modern'
-    | 'classic'
-    | 'elegant'
-    | 'creative'
-    | 'vintage'
-    | 'futuristic'
-    | 'retro'
-    | 'gothic'
-    | 'boho'
-    | 'hipster'
   primary_color: string
   secondary_color: string
   font_family: string
@@ -54,7 +41,7 @@ export interface ThemeSettings {
 
 export default class Event extends BaseModel {
   @column({ isPrimary: true })
-  declare id: string
+  declare id: number
 
   @column()
   declare title: string
@@ -96,7 +83,7 @@ export default class Event extends BaseModel {
   declare capacity: number
 
   @column()
-  declare status: 'draft' | 'published' | 'cancelled'
+  declare status: 'draft' | 'published'
 
   @column()
   declare user_id: number
@@ -140,6 +127,16 @@ export default class Event extends BaseModel {
     },
   })
   declare thumbnails: { url: string; key: string }[]
+
+  @column()
+  declare confirmation_message: string
+  @column()
+  declare event_sale_status: {
+    pre_sale: boolean
+    post_sale: boolean
+    post_sale_message: string
+    pre_sale_message: string
+  }
 
   @belongsTo(() => User, {
     foreignKey: 'user_id',

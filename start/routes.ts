@@ -34,8 +34,8 @@ router
 // Event Routes
 router
   .group(() => {
-    router.get('/events', [EventsController, 'getEvents'])
-    router.get('/events/upcoming', [EventsController, 'getUpcomingEvents'])
+    router.get('/events', [EventsController, 'getEvents']).use(middleware.auth())
+    router.get('/events/upcoming', [EventsController, 'getUpcomingEvents']).use(middleware.auth())
     router.put('/events/:id', [EventsController, 'updateEvent']).use(middleware.auth())
     router.get('/events/:id', [EventsController, 'getEvent']).use(middleware.auth())
     router.get('/events/public/:id', [EventsController, 'getPublicEvent'])
@@ -43,6 +43,8 @@ router
     router.delete('/events/:id', [EventsController, 'deleteEvent']).use(middleware.auth())
     router.post('/events/:id/vendor-applications', [EventsController, 'createVendorApplication'])
     router.get('/events/:id/vendor-applications', [EventsController, 'getVendorApplications'])
+    router.post('/events/:id/vendor-express-interest', [EventsController, 'vendorExpressInterest'])
+    router.get('/events/:id/vendor-pay-for-application', [EventsController, 'vendorPayForApplication'])
     router.post('/events/generate-vendor-payment-link', [
       EventsController,
       'generateVendorPaymentLink',
@@ -50,10 +52,12 @@ router
     // router
     //   .post('/events/:id/tickets', [EventsController, 'createEventTicket'])
     //   .use(middleware.auth())
-    router
-      .get('/generate-apple-ticket-pass/:bookingId', [EventsController, 'generateAppleTicketPass'])
-      .use(middleware.auth())
+    router.get('/generate-apple-ticket-pass/:bookingId', [
+      EventsController,
+      'generateAppleTicketPass',
+    ])
   })
+
   .prefix('/api/v1')
 
 // Event Ticket routes
