@@ -78,6 +78,18 @@ export default class User extends BaseModel {
     whatsapp: string | null
   }
 
+  @column({
+    prepare: (value: number[]) => JSON.stringify(value || []),
+    consume: (value: string) => {
+      try {
+        return typeof value === 'string' ? JSON.parse(value) : value || []
+      } catch {
+        return []
+      }
+    },
+  })
+  declare favorite_vendors: number[]
+
   @column()
   declare status: 'active' | 'inactive' | 'suspended'
 

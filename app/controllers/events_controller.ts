@@ -119,7 +119,6 @@ export default class EventsController {
     await event?.load('user')
     await event?.load('tickets')
     await event?.load('vendors')
-    await event?.load('custom_questions')
     const services = await VendorService.query()
       .whereIn(
         'user_id',
@@ -131,7 +130,6 @@ export default class EventsController {
       success: true,
       data: {
         ...event.toJSON(),
-        custom_questions: event.custom_questions.map((question) => question.toJSON()),
         vendor_services: event.vendors.map((vendor) => ({
           ...vendor.toJSON(),
           service_details: services.filter(
@@ -151,7 +149,6 @@ export default class EventsController {
     await event?.load('user')
     await event?.load('tickets')
     await event?.load('vendors')
-    await event?.load('custom_questions')
     const services = await VendorService.query()
       .whereIn(
         'user_id',
@@ -273,7 +270,6 @@ export default class EventsController {
         return ticket
           .merge({
             ...updateData,
-            custom_questions: ticketData.custom_questions,
           })
           .save()
       })
@@ -425,7 +421,6 @@ export default class EventsController {
     const event = await Event.findOrFail(params.eventId)
     const ticket = await Ticket.create({
       ...data,
-      custom_questions: JSON.stringify(data.custom_questions),
       event_id: event.id,
     })
 

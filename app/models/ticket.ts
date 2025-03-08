@@ -9,9 +9,6 @@ import {
 } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Event from './event.js'
-import Booking from './booking.js'
-import TicketCustomQuestion from './custom_question.js'
-import { v4 as uuidv4 } from 'uuid'
 
 export type TicketStatus = 'valid' | 'used' | 'cancelled' | 'refunded' | 'transferred'
 export type TicketType = 'general' | 'vip' | 'early_bird'
@@ -68,7 +65,4 @@ export default class Ticket extends BaseModel {
     foreignKey: 'event_id',
   })
   declare event: BelongsTo<typeof Event>
-
-  @hasMany(() => TicketCustomQuestion)
-  declare custom_questions: HasMany<typeof TicketCustomQuestion>
 }

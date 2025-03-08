@@ -8,7 +8,6 @@ const WalletsController = () => import('#controllers/wallets_controller')
 const StatsController = () => import('#controllers/stats_controller')
 const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
-const CustomQuestionsController = () => import('#controllers/custom_questions_controller')
 
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
@@ -134,7 +133,7 @@ router
 router
   .group(() => {
     // Public routes
-    router.get('vendors', [VendorsController, 'index'])
+    router.get('public/vendors', [VendorsController, 'index'])
     router.get('vendors/services/search', [VendorsController, 'searchByServices'])
     router.get('vendors/listing', [VendorsController, 'vendorListing'])
 
@@ -144,6 +143,7 @@ router
         router.group(() => {
           router.get('/vendors/services', [VendorsController, 'getVendorServices'])
           router.post('/vendors/services', [VendorsController, 'createVendorService'])
+
           // vendor events
           router.get('/vendors/events/upcoming', [VendorsController, 'getUpcomingEvents'])
           router.get('/vendors/events/past', [VendorsController, 'getPastEvents'])
@@ -154,6 +154,15 @@ router
       })
       .use(middleware.auth())
       .use(middleware.vendor())
+
+    router
+      .group(() => {
+        router.get('/vendors', [VendorsController, 'getAllVendors'])
+        router.get('/vendors/favorites', [VendorsController, 'getFavoriteVendors'])
+        router.post('/vendors/:id/favorite', [VendorsController, 'toggleFavoriteVendor'])
+      })
+      .use(middleware.auth())
+
     // .use(middleware.admin())
   })
   .prefix('/api/v1')
@@ -171,15 +180,3 @@ router
 router.group(() => {
   router.get('/events/upcoming', [EventsController, 'getUpcomingEvents'])
 })
-
-// Custom Questions routes
-router
-  .group(() => {
-    router.get('/tickets/questions', [CustomQuestionsController, 'index'])
-    router.post('/tickets/questions', [CustomQuestionsController, 'store'])
-    router.get('/tickets/questions/:id', [CustomQuestionsController, 'show'])
-    router.put('/tickets/questions/:id', [CustomQuestionsController, 'update'])
-    router.delete('/tickets/questions/:id', [CustomQuestionsController, 'destroy'])
-  })
-  .prefix('/api/v1')
-  .use(middleware.auth())

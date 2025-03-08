@@ -15,7 +15,6 @@ import Ticket from './ticket.js'
 import Vendor from './event_vendor.js'
 import EventVendor from './event_vendor.js'
 import VendorService from './vendor_service.js'
-import TicketCustomQuestion from './custom_question.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
@@ -163,9 +162,4 @@ export default class Event extends BaseModel {
     foreignKey: 'user_id',
   })
   declare services: HasMany<typeof VendorService>
-
-  @hasMany(() => TicketCustomQuestion, {
-    foreignKey: 'event_id',
-  })
-  declare custom_questions: HasMany<typeof TicketCustomQuestion>
 }

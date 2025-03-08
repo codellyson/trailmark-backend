@@ -283,6 +283,11 @@ export default class VendorsController {
     return response.ok(event)
   }
 
+  async getAllVendors({ request, response, auth }: HttpContext) {
+    const vendors = await User.query().where('role', 'vendor')
+    return response.ok(vendors)
+  }
+
   async vendorExpressInterest({ request, response, auth }: HttpContext) {
     const { event_id } = request.params()
     const { message } = request.body()
@@ -316,5 +321,62 @@ export default class VendorsController {
         error: 'Event not found',
       })
     }
+  }
+
+  async getFavoriteVendors({ request, response, auth }: HttpContext) {
+    const id = auth.user?.id
+    const user = await User.find(id)
+
+    const favoirtedVendors = user?.favorite_vendors
+
+    const vendors = await User.query()
+      .where('role', 'vendor')
+      .whereIn('id', favoirtedVendors)
+      .preload('vendor_services')
+
+    return response.ok(vendors)
+  }
+
+  async toggleFavoriteVendor({ request, response, auth }: HttpContext) {
+    const { id } = request.params()
+
+    const user = auth.user
+    const authUser = await User.find(user?.id)
+    const vendor = await User.find(id)
+    console.log(vendor)
+
+    console.log(authUser?.toJSON())
+
+    if (!vendor) {
+      return response.notFound({
+        success: false,
+        error: 'Vendor not found',
+      })
+    }
+
+    if (!authUser) {
+      return response.unauthorized({
+        success: false,
+        error: 'Unauthorized',
+      })
+    }
+
+    const currentFavorites = authUser.favorite_vendors || []
+    const vendorId = vendor.id
+
+    // Convert all existing values to numbers and remove duplicates
+    const normalizedFavorites = [...new Set(currentFavorites.map(Number))]
+
+    // Toggle: remove if exists, add if doesn't exist
+    authUser.favorite_vendors = normalizedFavorites.includes(vendorId)
+      ? normalizedFavorites.filter((_id) => _id !== vendorId)
+      : [...normalizedFavorites, vendorId]
+
+    await authUser?.save()
+
+    return response.ok({
+      success: true,
+      data: authUser,
+    })
   }
 }
