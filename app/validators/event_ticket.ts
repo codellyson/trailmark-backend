@@ -10,6 +10,17 @@ export const eventTicketSchema = vine.object({
   description: vine.string(),
   perks: vine.array(vine.string()),
   group_size: vine.number(),
+  custom_questions: vine
+    .array(
+      vine.object({
+        id: vine.string(),
+        question: vine.string(),
+        type: vine.string(),
+        required: vine.boolean(),
+        options: vine.array(vine.string()),
+      })
+    )
+    .optional(),
 })
 
 // Create ticket validator
@@ -24,7 +35,14 @@ export const updateEventTicketValidator = vine.compile(
   vine.object({
     data: vine
       .object({
-        ...eventTicketSchema.getProperties(),
+        tickets: vine
+          .array(
+            vine.object({
+              id: vine.string(),
+              ...eventTicketSchema.getProperties(),
+            })
+          )
+          .optional(),
       })
       .optional(),
   })

@@ -87,6 +87,14 @@ export const updateEventValidator = vine.compile(
       )
       .optional(),
     status: vine.enum(['draft', 'published']).optional(),
+    event_sale_status: vine
+      .object({
+        type: vine.enum(['none', 'pre_sale', 'post_sale']).optional(),
+        pre_sale_message: vine.string().optional(),
+        post_sale_message: vine.string().optional(),
+      })
+      .optional(),
+    confirmation_message: vine.string().optional(),
     theme_settings: vine
       .object({
         template: vine

@@ -95,6 +95,7 @@ export default class VendorsController {
 
     return response.json({
       success: true,
+      // @ts-ignore
       data: vendors.rows.map((vendor) => ({
         id: vendor.id,
         name: vendor.name,
@@ -280,5 +281,40 @@ export default class VendorsController {
     }
 
     return response.ok(event)
+  }
+
+  async vendorExpressInterest({ request, response, auth }: HttpContext) {
+    const { event_id } = request.params()
+    const { message } = request.body()
+    const user = auth.user
+
+    const event = await Event.find(event_id)
+
+    if (!event) {
+      return response.notFound({
+        success: false,
+        error: 'Event not found',
+      })
+    }
+
+    return response.ok({
+      success: true,
+      data: event,
+    })
+  }
+
+  async vendorPayForApplication({ request, response, auth }: HttpContext) {
+    const { event_id } = request.params()
+    const { message } = request.body()
+    const user = auth.user
+
+    const event = await Event.find(event_id)
+
+    if (!event) {
+      return response.notFound({
+        success: false,
+        error: 'Event not found',
+      })
+    }
   }
 }

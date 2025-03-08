@@ -3,12 +3,12 @@ import { middleware } from './kernel.js'
 const MiscallenousController = () => import('#controllers/miscallenous_controller')
 const AuthController = () => import('#controllers/auth_controller')
 const EventsController = () => import('#controllers/events_controller')
-const BookingsController = () => import('#controllers/bookings_controller')
 const WebhooksController = () => import('#controllers/webhooks_controller')
 const WalletsController = () => import('#controllers/wallets_controller')
 const StatsController = () => import('#controllers/stats_controller')
 const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
+const CustomQuestionsController = () => import('#controllers/custom_questions_controller')
 
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
@@ -43,8 +43,11 @@ router
     router.delete('/events/:id', [EventsController, 'deleteEvent']).use(middleware.auth())
     router.post('/events/:id/vendor-applications', [EventsController, 'createVendorApplication'])
     router.get('/events/:id/vendor-applications', [EventsController, 'getVendorApplications'])
-    router.post('/events/:id/vendor-express-interest', [EventsController, 'vendorExpressInterest'])
-    router.get('/events/:id/vendor-pay-for-application', [EventsController, 'vendorPayForApplication'])
+    router.post('/events/:id/vendor-express-interest', [VendorsController, 'vendorExpressInterest'])
+    router.get('/events/:id/vendor-pay-for-application', [
+      VendorsController,
+      'vendorPayForApplication',
+    ])
     router.post('/events/generate-vendor-payment-link', [
       EventsController,
       'generateVendorPaymentLink',
@@ -127,13 +130,6 @@ router
   // .middleware(middleware.auth())
   .prefix('/api/v1')
 
-router
-  .group(() => {
-    router.get('/bookings/user', [BookingsController, 'userBookings'])
-  })
-  .use(middleware.auth())
-  .prefix('/api/v1')
-
 // Vendor routes
 router
   .group(() => {
@@ -175,3 +171,15 @@ router
 router.group(() => {
   router.get('/events/upcoming', [EventsController, 'getUpcomingEvents'])
 })
+
+// Custom Questions routes
+router
+  .group(() => {
+    router.get('/tickets/questions', [CustomQuestionsController, 'index'])
+    router.post('/tickets/questions', [CustomQuestionsController, 'store'])
+    router.get('/tickets/questions/:id', [CustomQuestionsController, 'show'])
+    router.put('/tickets/questions/:id', [CustomQuestionsController, 'update'])
+    router.delete('/tickets/questions/:id', [CustomQuestionsController, 'destroy'])
+  })
+  .prefix('/api/v1')
+  .use(middleware.auth())

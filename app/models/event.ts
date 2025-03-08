@@ -15,6 +15,7 @@ import Ticket from './ticket.js'
 import Vendor from './event_vendor.js'
 import EventVendor from './event_vendor.js'
 import VendorService from './vendor_service.js'
+import TicketCustomQuestion from './custom_question.js'
 
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 
@@ -132,10 +133,9 @@ export default class Event extends BaseModel {
   declare confirmation_message: string
   @column()
   declare event_sale_status: {
-    pre_sale: boolean
-    post_sale: boolean
-    post_sale_message: string
+    type: 'none' | 'pre_sale' | 'post_sale'
     pre_sale_message: string
+    post_sale_message: string
   }
 
   @belongsTo(() => User, {
@@ -163,4 +163,9 @@ export default class Event extends BaseModel {
     foreignKey: 'user_id',
   })
   declare services: HasMany<typeof VendorService>
+
+  @hasMany(() => TicketCustomQuestion, {
+    foreignKey: 'event_id',
+  })
+  declare custom_questions: HasMany<typeof TicketCustomQuestion>
 }

@@ -119,6 +119,7 @@ export default class EventsController {
     await event?.load('user')
     await event?.load('tickets')
     await event?.load('vendors')
+    await event?.load('custom_questions')
     const services = await VendorService.query()
       .whereIn(
         'user_id',
@@ -129,26 +130,8 @@ export default class EventsController {
     return response.json({
       success: true,
       data: {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        custom_url: event.custom_url,
-        event_category: event.event_category,
-        event_type: event.event_type,
-        event_frequency: event.event_frequency,
-        start_date: event.start_date,
-        end_date: event.end_date,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        timezone: event.timezone,
-        location: event.location,
-        capacity: event.capacity,
-        status: event.status,
-        theme_settings: event.theme_settings,
-        social_details: event.social_details,
-        thumbnails: event.thumbnails.flat(),
-        user: event.user,
-        tickets: event.tickets,
+        ...event.toJSON(),
+        custom_questions: event.custom_questions.map((question) => question.toJSON()),
         vendor_services: event.vendors.map((vendor) => ({
           ...vendor.toJSON(),
           service_details: services.filter(
@@ -168,6 +151,7 @@ export default class EventsController {
     await event?.load('user')
     await event?.load('tickets')
     await event?.load('vendors')
+    await event?.load('custom_questions')
     const services = await VendorService.query()
       .whereIn(
         'user_id',
@@ -178,25 +162,7 @@ export default class EventsController {
     return response.json({
       success: true,
       data: {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        custom_url: event.custom_url,
-        event_category: event.event_category,
-        event_type: event.event_type,
-        event_frequency: event.event_frequency,
-        start_date: event.start_date,
-        end_date: event.end_date,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        timezone: event.timezone,
-        location: event.location,
-        capacity: event.capacity,
-        status: event.status,
-        theme_settings: event.theme_settings,
-        social_details: event.social_details,
-        thumbnails: event.thumbnails,
-        user: event.user,
+        ...event.toJSON(),
         tickets: event.tickets,
         vendor_services: event.vendors.map((vendor) => ({
           ...vendor.toJSON(),
@@ -210,7 +176,7 @@ export default class EventsController {
       },
     })
   }
-  /**
+  /**;
    * Update event details
    */
   async updateEvent({ params, request, response, auth }: HttpContext) {
@@ -235,6 +201,7 @@ export default class EventsController {
     }
 
     const payload = await request.validateUsing(updateEventValidator as any)
+    console.log(JSON.stringify(payload, null, 2))
     await event.merge({ ...payload }).save()
 
     return response.json({
@@ -289,14 +256,32 @@ export default class EventsController {
 
   async updateEventTicket({ request, response, auth }: HttpContext) {
     const payload = await request.validateUsing(updateEventTicketValidator)
-    const ticketData = payload.data
     const params = request.params()
-    const event = await Event.findOrFail(params.eventId)
-    const tickets = []
+
+    if (!payload.data?.tickets || !payload.data.tickets.length) {
+      return response.badRequest({
+        success: false,
+        error: 'No tickets data provided',
+      })
+    }
+
+    const updatedTickets = await Promise.all(
+      payload.data.tickets.map(async (ticketData) => {
+        const ticket = await Ticket.findOrFail(ticketData.id)
+        //@ts-expect-error - This is a workaround to remove the created_at and updated_at properties
+        const { id, created_at: createAt, updated_at: updateAt, ...updateData } = ticketData
+        return ticket
+          .merge({
+            ...updateData,
+            custom_questions: ticketData.custom_questions,
+          })
+          .save()
+      })
+    )
 
     return response.json({
       success: true,
-      data: [],
+      data: updatedTickets,
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
@@ -322,7 +307,7 @@ export default class EventsController {
     const event = await Event.findOrFail(params.id)
 
     try {
-      // Check for existing vendor applications first
+      // Check for existing vendor applications and collect duplicates
       const existingVendors = await EventVendor.query()
         .where('event_id', event.id)
         .whereIn(
@@ -331,20 +316,34 @@ export default class EventsController {
         )
 
       if (existingVendors.length > 0) {
+        const duplicateVendors = existingVendors.map((v) => ({
+          vendor_id: v.vendor_id,
+          status: v.status,
+        }))
+
         return response.conflict({
           success: false,
           data: null,
           error: {
             code: 'DUPLICATE_VENDOR',
             message: 'One or more vendors are already registered for this event',
-            vendors: existingVendors.map((v) => v.vendor_id),
+            details: {
+              duplicateVendors,
+              message: 'These vendors are already registered for the event',
+            },
           },
           meta: { timestamp: new Date().toISOString() },
         })
       }
 
-      const vendorApplication = await EventVendor.createMany(
-        vendors.map((vendor) => ({
+      // Filter out any vendors that already exist
+      const newVendors = vendors.filter(
+        (vendor) => !existingVendors.some((ev) => ev.vendor_id === vendor.vendor_id)
+      )
+
+      // Only create applications for new vendors
+      const vendorApplications = await EventVendor.createMany(
+        newVendors.map((vendor) => ({
           event_id: event.id.toString(),
           ...vendor,
           setup_time: DateTime.fromISO(vendor.setup_time),
@@ -354,11 +353,30 @@ export default class EventsController {
 
       return response.json({
         success: true,
-        data: vendorApplication,
+        data: vendorApplications,
         error: null,
         meta: { timestamp: new Date().toISOString() },
       })
     } catch (error) {
+      console.error('Vendor application creation error:', error)
+
+      // Handle specific database constraint violation
+      if (error.code === '23505') {
+        return response.conflict({
+          success: false,
+          data: null,
+          error: {
+            code: 'DUPLICATE_VENDOR',
+            message: 'One or more vendors are already registered for this event',
+            details: {
+              constraint: error.constraint,
+              detail: error.detail,
+            },
+          },
+          meta: { timestamp: new Date().toISOString() },
+        })
+      }
+
       // Handle other potential errors
       return response.internalServerError({
         success: false,
@@ -366,6 +384,7 @@ export default class EventsController {
         error: {
           code: 'SERVER_ERROR',
           message: 'Failed to create vendor application',
+          details: error.message,
         },
         meta: { timestamp: new Date().toISOString() },
       })
@@ -406,6 +425,7 @@ export default class EventsController {
     const event = await Event.findOrFail(params.eventId)
     const ticket = await Ticket.create({
       ...data,
+      custom_questions: JSON.stringify(data.custom_questions),
       event_id: event.id,
     })
 
