@@ -44,6 +44,9 @@ export default class EventVendor extends BaseModel {
   @column()
   declare vendor_id: string
 
+  @column()
+  declare user_id: string
+
   // Vendor Service IDs
   @column()
   declare service_id: string
@@ -54,16 +57,21 @@ export default class EventVendor extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
 
-  @belongsTo(() => Event)
+  @belongsTo(() => Event, {
+    foreignKey: 'event_id',
+    localKey: 'id',
+  })
   declare event: BelongsTo<typeof Event>
 
   @belongsTo(() => User, {
-    foreignKey: 'user_id',
+    foreignKey: 'vendor_id',
+    localKey: 'id',
   })
   declare vendor: BelongsTo<typeof User>
 
-  @hasMany(() => VendorService, {
-    foreignKey: 'user_id',
+  @belongsTo(() => VendorService, {
+    foreignKey: 'service_id',
+    localKey: 'id',
   })
-  declare services: HasMany<typeof VendorService>
+  declare service: BelongsTo<typeof VendorService>
 }

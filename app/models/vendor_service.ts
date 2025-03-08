@@ -1,13 +1,14 @@
 import { DateTime } from 'luxon'
 import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
 import User from './user.js'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Event from './event.js'
 import { SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
+import EventVendor from './event_vendor.js'
 BaseModel.namingStrategy = new SnakeCaseNamingStrategy()
 export default class VendorService extends BaseModel {
   @column({ isPrimary: true })
-  declare id: number
+  declare id: string
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -56,10 +57,16 @@ export default class VendorService extends BaseModel {
   declare features: string[]
 
   @column()
-  declare user_id: number
+  declare user_id: string
 
   @belongsTo(() => User, {
     foreignKey: 'user_id',
   })
   declare vendor: BelongsTo<typeof User>
+
+  @hasMany(() => EventVendor, {
+    foreignKey: 'service_id',
+    localKey: 'id',
+  })
+  declare event_vendors: HasMany<typeof EventVendor>
 }

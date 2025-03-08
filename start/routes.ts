@@ -158,6 +158,7 @@ router
     router
       .group(() => {
         router.get('/vendors', [VendorsController, 'getAllVendors'])
+        router.get('/vendors/connected-vendors', [VendorsController, 'getConnectedVendors'])
         router.get('/vendors/favorites', [VendorsController, 'getFavoriteVendors'])
         router.post('/vendors/:id/favorite', [VendorsController, 'toggleFavoriteVendor'])
       })

@@ -13,6 +13,7 @@ import VendorService from '#models/vendor_service'
 import Event from '#models/event'
 import { HttpStatusCode } from 'axios'
 import { DateTime } from 'luxon'
+import EventVendor from '#models/event_vendor'
 
 @inject()
 export default class VendorsController {
@@ -164,7 +165,7 @@ export default class VendorsController {
       description: payload.description,
       category: payload.category,
       status: payload.status || 'active',
-      user_id: vendor.id,
+      user_id: String(vendor.id),
       images: imagesArray,
       features: featuresArray,
     }
@@ -378,5 +379,85 @@ export default class VendorsController {
       success: true,
       data: authUser,
     })
+  }
+
+  async getConnectedVendors({ request, response, auth }: HttpContext) {
+    try {
+      const id = auth.user?.id
+      const user = await User.find(id)
+
+      console.log('Fetching connected vendors for user:', id)
+
+      // First get all event vendors with their relationships
+      const query = await EventVendor.query()
+        .where('status', 'active')
+        .preload('event')
+        .preload('vendor')
+        .preload('service', (serviceQuery) => {
+          serviceQuery.where('status', 'active')
+        })
+
+      console.log('Raw query count:', query.length)
+
+      // Debug: Let's check if these services exist
+      const serviceIds = query.map((q) => q.service_id).filter(Boolean)
+      console.log('Looking for services with IDs:', serviceIds)
+
+      // Direct query to check services
+      const services = await VendorService.query()
+        .whereIn('id', serviceIds)
+        .where('status', 'active')
+
+      console.log('Found services count:', services.length)
+      console.log(
+        'Service details:',
+        JSON.stringify(
+          services.map((s) => ({
+            id: s.id,
+            name: s.name,
+            user_id: s.user_id,
+          })),
+          null,
+          2
+        )
+      )
+
+      // Filter to get only vendors connected to events created by the current user
+      const myConnectedVendors = query.filter((vendor) => {
+        const isMyEvent = vendor.event?.user_id === id
+        console.log(
+          `Checking vendor ${vendor.id}: event user_id=${vendor.event?.user_id}, my id=${id}, match=${isMyEvent}`
+        )
+        return isMyEvent
+      })
+
+      console.log('Filtered vendors count:', myConnectedVendors.length)
+
+      // Transform the response to include service details
+      const transformedVendors = myConnectedVendors.map((vendor) => {
+        const vendorJson = vendor.toJSON()
+        const matchingService = services.find((s) => s.id === vendor.service_id)
+
+        if (!matchingService && vendor.service_id) {
+          console.log(`Warning: Service ${vendor.service_id} not found for vendor ${vendor.id}`)
+        }
+
+        return {
+          ...vendorJson,
+          service: matchingService || vendor.service || null,
+        }
+      })
+
+      return response.ok({
+        success: true,
+        data: transformedVendors,
+      })
+    } catch (error) {
+      console.error('Error in getConnectedVendors:', error)
+      return response.internalServerError({
+        success: false,
+        error: 'An error occurred while fetching connected vendors',
+      })
+    }
   }
 }
