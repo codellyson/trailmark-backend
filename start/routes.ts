@@ -145,7 +145,8 @@ router
           router.post('/vendors/services', [VendorsController, 'createVendorService'])
 
           // vendor events
-          router.get('/vendors/events/upcoming', [VendorsController, 'getUpcomingEvents'])
+          router.get('/vendors/connected-events', [VendorsController, 'getVendorConnectedEvents'])
+          router.get('/vendors/events/upcoming', [VendorsController, 'getVendorUpcomingEvents'])
           router.get('/vendors/events/past', [VendorsController, 'getPastEvents'])
           router.put('/vendors/services/:id', [VendorsController, 'updateVendorService'])
           router.delete('/vendors/services/:id', [VendorsController, 'deleteVendorService'])
@@ -161,6 +162,8 @@ router
         router.get('/vendors/connected-vendors', [VendorsController, 'getConnectedVendors'])
         router.get('/vendors/favorites', [VendorsController, 'getFavoriteVendors'])
         router.post('/vendors/:id/favorite', [VendorsController, 'toggleFavoriteVendor'])
+        router.post('/vendors/:vendorId/payment-link', [VendorsController, 'generatePaymentLink'])
+        router.post('/vendors/:vendorId/verify-payment', [VendorsController, 'verifyPayment'])
       })
       .use(middleware.auth())
 

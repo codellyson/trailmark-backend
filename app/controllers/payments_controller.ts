@@ -1,14 +1,7 @@
-import type { HttpContext } from '@adonisjs/core/http'
 import { inject } from '@adonisjs/core'
-import EventPayment from '#models/event_payment'
-import { DateTime } from 'luxon'
-import env from '#start/env'
-import PhotographyService from '#models/photography_service'
-import Addon from '#models/addon'
-import EscrowAccount from '#models/escrow_account'
-import { createHash } from 'node:crypto'
-import db from '@adonisjs/lucid/services/db'
+
 import axios from 'axios'
+import env from '#start/env'
 
 @inject()
 class PaymentsService {

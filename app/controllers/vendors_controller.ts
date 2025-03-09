@@ -14,6 +14,7 @@ import Event from '#models/event'
 import { HttpStatusCode } from 'axios'
 import { DateTime } from 'luxon'
 import EventVendor from '#models/event_vendor'
+import { PaymentService } from '#services/payment_service'
 
 @inject()
 export default class VendorsController {
@@ -221,25 +222,27 @@ export default class VendorsController {
     })
   }
 
-  //Vendor Events
-  async getUpcomingEvents({ request, response, auth }: HttpContext) {
+  // Vendor Events
+  async getVendorUpcomingEvents({ request, response, auth }: HttpContext) {
     const id = auth.user?.id
-    console.log(id)
+
     if (!id) {
       return response.unauthorized({
         success: false,
         error: 'Unauthorized',
       })
     }
-    // const events = await Event.query().where('user_id', id).where('start_date', '>', DateTime.now())
 
-    // return events that are upcoming and the vendor is a vendor for the event
-    const events = await Event.query()
-      .where('user_id', Number(id))
-      .where('start_date', '>', DateTime.now().toSQL())
-      .whereHas('vendors', (builder) => builder.where('user_id', Number(id)))
+    const vendorEvents = await EventVendor.query()
+      .where('vendor_id', Number(id))
+      .preload('event', (builder) => builder.where('start_date', '>', DateTime.now().toSQL()))
 
-    return response.ok(events)
+    const vendorUpcomingEvents = vendorEvents.map((event) => event.event.toJSON())
+
+    return response.ok({
+      success: true,
+      data: vendorUpcomingEvents,
+    })
   }
 
   async getPastEvents({ request, response, auth }: HttpContext) {
@@ -290,11 +293,11 @@ export default class VendorsController {
   }
 
   async vendorExpressInterest({ request, response, auth }: HttpContext) {
-    const { event_id } = request.params()
+    const { eventId } = request.params()
     const { message } = request.body()
     const user = auth.user
 
-    const event = await Event.find(event_id)
+    const event = await Event.find(eventId)
 
     if (!event) {
       return response.notFound({
@@ -310,11 +313,11 @@ export default class VendorsController {
   }
 
   async vendorPayForApplication({ request, response, auth }: HttpContext) {
-    const { event_id } = request.params()
+    const { eventId } = request.params()
     const { message } = request.body()
     const user = auth.user
 
-    const event = await Event.find(event_id)
+    const event = await Event.find(eventId)
 
     if (!event) {
       return response.notFound({
@@ -332,6 +335,7 @@ export default class VendorsController {
 
     const vendors = await User.query()
       .where('role', 'vendor')
+      // @ts-ignore
       .whereIn('id', favoirtedVendors)
       .preload('vendor_services')
 
@@ -344,10 +348,6 @@ export default class VendorsController {
     const user = auth.user
     const authUser = await User.find(user?.id)
     const vendor = await User.find(id)
-    console.log(vendor)
-
-    console.log(authUser?.toJSON())
-
     if (!vendor) {
       return response.notFound({
         success: false,
@@ -381,76 +381,40 @@ export default class VendorsController {
     })
   }
 
+  // Get Connected Vendors for organisers
   async getConnectedVendors({ request, response, auth }: HttpContext) {
     try {
       const id = auth.user?.id
-      const user = await User.find(id)
 
-      console.log('Fetching connected vendors for user:', id)
-
-      // First get all event vendors with their relationships
-      const query = await EventVendor.query()
-        .where('status', 'active')
-        .preload('event')
-        .preload('vendor')
-        .preload('service', (serviceQuery) => {
-          serviceQuery.where('status', 'active')
-        })
-
-      console.log('Raw query count:', query.length)
-
-      // Debug: Let's check if these services exist
-      const serviceIds = query.map((q) => q.service_id).filter(Boolean)
-      console.log('Looking for services with IDs:', serviceIds)
-
-      // Direct query to check services
-      const services = await VendorService.query()
-        .whereIn('id', serviceIds)
-        .where('status', 'active')
-
-      console.log('Found services count:', services.length)
-      console.log(
-        'Service details:',
-        JSON.stringify(
-          services.map((s) => ({
-            id: s.id,
-            name: s.name,
-            user_id: s.user_id,
-          })),
-          null,
-          2
-        )
+      const events = await Event.query().where('user_id', id!)
+      const eventVendors = await EventVendor.query().whereIn(
+        'event_id',
+        events.map((event) => event.id)
       )
 
-      // Filter to get only vendors connected to events created by the current user
-      const myConnectedVendors = query.filter((vendor) => {
-        const isMyEvent = vendor.event?.user_id === id
-        console.log(
-          `Checking vendor ${vendor.id}: event user_id=${vendor.event?.user_id}, my id=${id}, match=${isMyEvent}`
+      const services = await VendorService.query()
+        .whereIn(
+          'id',
+          eventVendors.map((eventVendor) => {
+            return eventVendor.service_id
+          })
         )
-        return isMyEvent
-      })
+        .preload('vendor')
 
-      console.log('Filtered vendors count:', myConnectedVendors.length)
-
-      // Transform the response to include service details
-      const transformedVendors = myConnectedVendors.map((vendor) => {
-        const vendorJson = vendor.toJSON()
-        const matchingService = services.find((s) => s.id === vendor.service_id)
-
-        if (!matchingService && vendor.service_id) {
-          console.log(`Warning: Service ${vendor.service_id} not found for vendor ${vendor.id}`)
-        }
-
+      const connectedServices = eventVendors.map((eventVendor) => {
+        const service = services.find((serv) => serv.id.toString() === eventVendor.service_id)
+        // @ts-ignore
+        const event = events.find((evnt) => evnt.id === eventVendor.event_id)
         return {
-          ...vendorJson,
-          service: matchingService || vendor.service || null,
+          ...eventVendor.toJSON(),
+          service: service?.toJSON(),
+          event: event,
         }
       })
 
       return response.ok({
         success: true,
-        data: transformedVendors,
+        data: connectedServices,
       })
     } catch (error) {
       console.error('Error in getConnectedVendors:', error)
@@ -459,5 +423,77 @@ export default class VendorsController {
         error: 'An error occurred while fetching connected vendors',
       })
     }
+  }
+
+  // Vendor Connected Events
+  async getVendorConnectedEvents({ request, response, auth }: HttpContext) {
+    const id = auth.user?.id
+    const eventVendors = await EventVendor.query().where('vendor_id', Number(id))
+    const events = await Event.query().whereIn(
+      'id',
+      eventVendors.map((eventVendor) => eventVendor.event_id)
+    )
+
+    const services = await VendorService.query()
+      .whereIn(
+        'id',
+        eventVendors.map((eventVendor) => {
+          return eventVendor.service_id
+        })
+      )
+      .preload('vendor')
+
+    const transformed = eventVendors.map((eventVendor) => {
+      return {
+        ...eventVendor.toJSON(),
+        // @ts-ignore
+        event: events.find((event) => event.id === eventVendor.event_id),
+        service: services.find((service) => service.id.toString() === eventVendor.service_id),
+      }
+    })
+
+    return response.ok({
+      success: true,
+      data: transformed,
+    })
+  }
+
+  async generatePaymentLink({ request, response, auth }: HttpContext) {
+    const { vendorId } = request.params()
+    const { amount } = request.body()
+
+    const vendor = await User.find(vendorId)
+
+    if (!vendor) {
+      return response.notFound({
+        success: false,
+        error: 'Vendor not found',
+      })
+    }
+
+    const paymentLink = await new PaymentService().createPayment({
+      email: vendor.email,
+      amount: amount,
+      reference: vendor.id.toString(),
+    })
+    console.log({ paymentLink })
+    return response.ok(paymentLink)
+  }
+  async verifyPayment({ request, response, auth }: HttpContext) {
+    const { vendorId } = request.params()
+    const { reference } = request.body()
+
+    const vendor = await User.find(vendorId)
+
+    if (!vendor) {
+      return response.notFound({
+        success: false,
+        error: 'Vendor not found',
+      })
+    }
+
+    const payment = await new PaymentService().verifyPayment(reference)
+
+    return response.ok(payment)
   }
 }
