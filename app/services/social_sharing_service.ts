@@ -23,6 +23,7 @@ export default class SocialSharingService {
       whatsapp: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
       // Instagram doesn't support direct sharing via URL, but we can copy the link
       instagram: eventUrl,
+      url: eventUrl,
     }
   }
 

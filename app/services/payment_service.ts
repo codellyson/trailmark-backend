@@ -10,12 +10,24 @@ export class PaymentService {
     this.baseURL = 'https://api.paystack.co/transaction/initialize'
   }
 
-  public async createPayment(payload: { email: string; amount: number; reference: string }) {
-    const response = await axios.post(this.baseURL, payload, {
-      headers: {
-        Authorization: `Bearer ${env.get('PAYSTACK_SECRET_KEY')}`,
-      },
-    })
+  public async createPayment(payload: {
+    email: string
+    amount: number
+    reference: string
+    metadata: any
+  }) {
+    try {
+      const response = await axios.post(this.baseURL, payload, {
+        headers: {
+          Authorization: `Bearer ${env.get('PAYSTACK_SECRET_KEY')}`,
+        },
+      })
+
+      return response.data
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
   }
 
   public async verifyPayment(reference: string) {

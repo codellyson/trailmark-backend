@@ -69,6 +69,7 @@ export const updateEventValidator = vine.compile(
     timezone: vine.string().optional(),
     location: vine.string().optional(),
     capacity: vine.number().optional(),
+    vendor_charge: vine.number().optional(),
     social_details: vine
       .object({
         website_url: vine.string().optional(),

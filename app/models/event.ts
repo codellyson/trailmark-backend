@@ -53,6 +53,9 @@ export default class Event extends BaseModel {
   declare custom_url: string
 
   @column()
+  declare vendor_charge: number
+
+  @column()
   declare event_category: string
 
   @column()

@@ -10,6 +10,7 @@ import {
 import { createAddonValidator } from '#validators/event_add_on'
 import {
   createEventTicketValidator,
+  payForTicketValidator,
   updateEventTicketStatusValidator,
   updateEventTicketValidator,
 } from '#validators/event_ticket'
@@ -22,6 +23,7 @@ import { generateQRCode, generateTicketNumber } from '../utils/ticket.js'
 import Vendor from '#models/event_vendor'
 import EventVendor from '#models/event_vendor'
 import VendorService from '#models/vendor_service'
+import { PaymentService } from '#services/payment_service'
 
 @inject()
 export default class EventsController {
@@ -179,11 +181,6 @@ export default class EventsController {
   async updateEvent({ params, request, response, auth }: HttpContext) {
     const eventId = params.id
     const event = await Event.query().where('id', eventId).firstOrFail()
-
-    console.log({
-      userID: auth.user!.id.toString(),
-      eventUserID: event.user_id,
-    })
     // Check if user is authorized
     if (event.user_id.toString() !== auth.user!.id.toString()) {
       return response.forbidden({
@@ -198,7 +195,6 @@ export default class EventsController {
     }
 
     const payload = await request.validateUsing(updateEventValidator as any)
-    console.log(JSON.stringify(payload, null, 2))
     await event.merge({ ...payload }).save()
 
     return response.json({
@@ -270,6 +266,16 @@ export default class EventsController {
         return ticket
           .merge({
             ...updateData,
+            perks: updateData.perks || [],
+            sale_ends_at: updateData.sale_ends_at
+              ? DateTime.fromISO(updateData.sale_ends_at)
+              : undefined,
+            sale_starts_at: updateData.sale_starts_at
+              ? DateTime.fromISO(updateData.sale_starts_at)
+              : undefined,
+            status: (updateData.status as TicketStatus) || TicketStatus.DRAFT,
+            description: updateData.description || undefined,
+            type: (updateData.type as TicketType) || TicketType.PAID,
           })
           .save()
       })
@@ -422,6 +428,12 @@ export default class EventsController {
     const ticket = await Ticket.create({
       ...data,
       event_id: event.id,
+      sale_ends_at: data.sale_ends_at ? DateTime.fromISO(data.sale_ends_at) : undefined,
+      sale_starts_at: data.sale_starts_at ? DateTime.fromISO(data.sale_starts_at) : undefined,
+      status: (data.status as TicketStatus) || TicketStatus.DRAFT,
+      type: data.type as TicketType,
+      description: data.description || undefined,
+      perks: Array.isArray(data.perks) ? data.perks : [],
     })
 
     return response.json({
@@ -443,60 +455,121 @@ export default class EventsController {
       data: events,
     })
   }
-  async generateAppleTicketPass({ params, response }: HttpContext) {
-    const booking = await Booking.findOrFail(params.bookingId)
-    await booking.load('event')
-    await booking.load('user')
 
-    const passBuffer = await this.ticketPassService.generateApplePass(booking, booking.event)
-
-    response.header('Content-Type', 'application/vnd.apple.pkpass')
-    response.header(
-      'Content-Disposition',
-      `attachment; filename="${booking.booking_reference}.pkpass"`
-    )
-
-    return response.send(passBuffer)
+  generateReference() {
+    return `NE-TICKET-${Math.random().toString(36).substring(2, 15)}`
   }
 
-  async generateGoogleTicketPass({ params, response }: HttpContext) {
-    const booking = await Booking.findOrFail(params.bookingId)
-    await booking.load('event')
-    await booking.load('user')
+  async payForTicket({ request, response, auth }: HttpContext) {
+    const params = request.params()
+    const event = await Event.findOrFail(params.eventId)
+    try {
+      const payload = await request.validateUsing(payForTicketValidator)
+      const selectedTickets = payload.selectedTickets
+      let totalAmountInKobo = 0
 
-    const jwt = await this.ticketPassService.generateGooglePass(booking, booking.event)
+      // Collect ticket details for metadata
+      const ticketDetails = []
 
-    return response.json({
-      saveUrl: `https://pay.google.com/gp/v/save/${jwt}`,
-    })
-  }
+      for (const ticket of selectedTickets) {
+        const existingTicket = await Ticket.findOrFail(ticket.id)
+        console.log({ existingTicket: existingTicket.toJSON() })
 
-  async getTicketPassOptions({ request, response }: HttpContext) {
-    const booking = await Booking.findOrFail(request.params().bookingId)
-    await booking.load('event')
+        // Validate ticket availability
+        if (!existingTicket.isAvailable()) {
+          return response.badRequest({
+            success: false,
+            error: {
+              code: 'TICKET_UNAVAILABLE',
+              message: `Ticket ${existingTicket.name} is no longer available`,
+            },
+            meta: { timestamp: DateTime.now().toISO() },
+          })
+        }
 
-    // Detect device/browser
-    const userAgent = request.header('User-Agent')?.toLowerCase() || ''
-    console.log(userAgent)
-    const isIOS = /iphone|ipad|ipod/.test(userAgent)
-    const isAndroid = /android/.test(userAgent)
-    const isMac = /macintosh|mac os x/i.test(userAgent)
-    // For Mac desktop browsers, also enable Apple Wallet pass
-    const isAppleSupported = isIOS || isMac
+        if (Number(existingTicket.quantity_available) < ticket.quantity) {
+          return response.badRequest({
+            success: false,
+            error: {
+              code: 'INSUFFICIENT_QUANTITY',
+              message: `Insufficient quantity available for ticket ${existingTicket.name}`,
+            },
+            meta: { timestamp: DateTime.now().toISO() },
+          })
+        }
 
-    return response.json({
-      booking_reference: booking.booking_reference,
-      event_name: booking.event.title,
-      passes: {
-        apple: {
-          available: isAppleSupported,
-          url: `http://localhost:3333/api/bookings/${booking.id}/apple-pass`,
+        try {
+          await existingTicket.validatePurchaseQuantity(ticket.quantity)
+        } catch (error) {
+          return response.badRequest({
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: error.message,
+            },
+            meta: { timestamp: DateTime.now().toISO() },
+          })
+        }
+
+        const amount = Number.parseFloat(existingTicket.price.toString())
+        const PLATFORM_FEE = existingTicket.calculatePlatformFee(amount)
+        const totalAmount = existingTicket.calculateTotalPrice(ticket.quantity) + PLATFORM_FEE
+        totalAmountInKobo += totalAmount * 100
+
+        ticketDetails.push({
+          id: existingTicket.id,
+          name: existingTicket.name,
+          price: existingTicket.price,
+          quantity: ticket.quantity,
+          type: existingTicket.type,
+          event_id: existingTicket.event_id,
+        })
+      }
+      const eventOrganiserId = event.user_id
+
+      const payment = await new PaymentService().createPayment({
+        amount: totalAmountInKobo,
+        email: payload.email,
+        reference: this.generateReference(),
+        metadata: {
+          payment_type: 'ticket',
+          event_organiser_id: eventOrganiserId,
+          event_id: event.id,
+          tickets: ticketDetails,
+          user: payload.email,
         },
-        google: {
-          available: isAndroid,
-          url: `http://localhost:3333/api/bookings/${booking.id}/google-pass`,
+      })
+
+      return response.json({
+        success: true,
+        data: payment.data,
+        error: null,
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    } catch (error) {
+      console.log({ error })
+      if (error instanceof Error && error.message === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          success: false,
+          error: {
+            code: 'TICKET_NOT_FOUND',
+            message: 'One or more selected tickets were not found',
+          },
+          meta: { timestamp: DateTime.now().toISO() },
+        })
+      }
+
+      console.error('Payment creation error:', error)
+      return response.badRequest({
+        success: false,
+        data: null,
+        error: {
+          code: 'SERVER_ERROR',
+          message: 'Failed to create payment',
+          details: error.message,
         },
-      },
-    })
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    }
   }
 }

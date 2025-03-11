@@ -54,10 +54,6 @@ router
     // router
     //   .post('/events/:id/tickets', [EventsController, 'createEventTicket'])
     //   .use(middleware.auth())
-    router.get('/generate-apple-ticket-pass/:bookingId', [
-      EventsController,
-      'generateAppleTicketPass',
-    ])
   })
 
   .prefix('/api/v1')
@@ -82,6 +78,9 @@ router
     router
       .delete('/events/:eventId/tickets/:id', [EventsController, 'deleteEventTicket'])
       .use(middleware.auth())
+
+    // pay for ticket
+    router.post('/events/:eventId/tickets/pay', [EventsController, 'payForTicket'])
   })
   .prefix('/api/v1')
 
@@ -118,17 +117,6 @@ router
   .prefix('/api/v1')
   .use(middleware.auth())
 
-// Ticket pass routes
-router
-  .group(() => {
-    router.get('/bookings/:bookingId/passes', [EventsController, 'getTicketPassOptions'])
-    router.get('/bookings/:bookingId/apple-pass', [EventsController, 'generateAppleTicketPass'])
-    router.get('/bookings/:bookingId/google-pass', [EventsController, 'generateGoogleTicketPass'])
-  })
-
-  // .middleware(middleware.auth())
-  .prefix('/api/v1')
-
 // Vendor routes
 router
   .group(() => {
@@ -162,8 +150,8 @@ router
         router.get('/vendors/connected-vendors', [VendorsController, 'getConnectedVendors'])
         router.get('/vendors/favorites', [VendorsController, 'getFavoriteVendors'])
         router.post('/vendors/:id/favorite', [VendorsController, 'toggleFavoriteVendor'])
-        router.post('/vendors/:vendorId/payment-link', [VendorsController, 'generatePaymentLink'])
-        router.post('/vendors/:vendorId/verify-payment', [VendorsController, 'verifyPayment'])
+        router.post('/vendors/:serviceId/payment-link', [VendorsController, 'generatePaymentLink'])
+        router.post('/vendors/:serviceId/verify-payment', [VendorsController, 'verifyPayment'])
       })
       .use(middleware.auth())
 

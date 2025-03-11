@@ -457,12 +457,14 @@ export default class VendorsController {
       data: transformed,
     })
   }
-
+  generateReference() {
+    return 'NE-VENDOR-' + Math.random().toString(36).substring(2, 15)
+  }
   async generatePaymentLink({ request, response, auth }: HttpContext) {
-    const { vendorId } = request.params()
-    const { amount } = request.body()
+    const { serviceId } = request.params()
 
-    const vendor = await User.find(vendorId)
+    const vendor = await User.find(auth.user?.id)
+    console.log({ serviceId })
 
     if (!vendor) {
       return response.notFound({
@@ -471,14 +473,69 @@ export default class VendorsController {
       })
     }
 
+    const eventVendorService = await EventVendor.find(serviceId)
+
+    if (!eventVendorService) {
+      return response.notFound({
+        success: false,
+        error: 'Vendor service not found',
+      })
+    }
+
+    const custom_fields = [
+      {
+        display_name: 'Vendor ID',
+        variable_name: 'vendor_id',
+        value: vendor.id,
+      },
+      {
+        display_name: 'Service ID',
+        variable_name: 'service_id',
+        value: serviceId,
+      },
+      {
+        display_name: 'Event ID',
+        variable_name: 'event_id',
+        value: eventVendorService.event_id,
+      },
+      {
+        display_name: 'Payment Type',
+        variable_name: 'payment_type',
+        value: 'vendor_registration',
+      },
+    ]
+
+    const event = await Event.find(eventVendorService.event_id)
+    const VENDOR_REGISTRATION_FEE = Number.parseFloat(event?.vendor_charge.toString()!)
+    const PLATFORM_FEE = 0.05
+    const PERCENT = VENDOR_REGISTRATION_FEE * PLATFORM_FEE
+    const totalAmount = VENDOR_REGISTRATION_FEE + PERCENT
+    //in lowest currency
+    const totalAmountInLowestCurrency = Math.round(totalAmount * 100)
+
+    const eventOrganiserId = event?.user_id
+
     const paymentLink = await new PaymentService().createPayment({
       email: vendor.email,
-      amount: amount,
-      reference: vendor.id.toString(),
+      amount: totalAmountInLowestCurrency,
+      reference: this.generateReference(),
+      metadata: {
+        payment_type: 'vendor_registration',
+        event_organiser_id: eventOrganiserId,
+        event_vendor_id: eventVendorService.id,
+        event_vendor_service_id: eventVendorService.id,
+        vendor_id: vendor.id,
+        event_id: eventVendorService.event_id,
+        custom_fields: custom_fields,
+      },
     })
     console.log({ paymentLink })
-    return response.ok(paymentLink)
+    return response.ok({
+      success: true,
+      data: paymentLink,
+    })
   }
+
   async verifyPayment({ request, response, auth }: HttpContext) {
     const { vendorId } = request.params()
     const { reference } = request.body()

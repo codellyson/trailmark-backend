@@ -12,7 +12,6 @@ export default class WalletsController {
       {
         user_id: auth.user!.id,
         balance: 0,
-        escrow_balance: 0,
       }
     )
 
@@ -33,7 +32,7 @@ export default class WalletsController {
     const transactions = await wallet
       .related('transactions')
       .query()
-      .orderBy('createdAt', 'desc')
+      .orderBy('created_at', 'desc')
       .paginate(page, limit)
 
     return response.json({
