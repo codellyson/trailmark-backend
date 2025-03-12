@@ -111,6 +111,14 @@ export default class User extends BaseModel {
     currency: string
   }
 
+  @column()
+  declare payment_settings: {
+    paystack_subaccount_code: string | null
+    paystack_subaccount_name: string | null
+    paystack_subaccount_phone: string | null
+    paystack_subaccount_address: string | null
+  } | null
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 

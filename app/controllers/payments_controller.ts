@@ -1,35 +1,58 @@
 import { inject } from '@adonisjs/core'
 
-import axios from 'axios'
-import env from '#start/env'
-
+import { PaymentService } from '#services/payment_service'
+import { HttpContext } from '@adonisjs/core/http'
 @inject()
-class PaymentsService {
-  private baseURL: string
+export default class PaymentsController {
+  paymentservice: PaymentService
   constructor() {
-    this.baseURL = 'https://api.paystack.co/transaction/initialize'
+    this.paymentservice = new PaymentService()
   }
 
-  public async initializePaystackPayment(payload: {
-    email: string
-    amount: number
-    reference: string
-    callback_url: string
-    metadata: {
-      payment_id: string
-      event_id: string
-      customer_id: string
+  @inject()
+  async listOfBanks({ response }: HttpContext) {
+    try {
+      const banks = await this.paymentservice.listOfBanks()
+      return response.ok({
+        success: true,
+        data: banks,
+        error: null,
+        meta: { timestamp: new Date().toISOString() },
+      })
+    } catch (error) {
+      return response.badRequest({
+        success: false,
+        data: null,
+        error: error,
+      })
     }
-  }) {
-    const paystackResponse = await axios.post(`${this.baseURL}`, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.get('PAYSTACK_SECRET_KEY')}`,
-      },
-    })
+  }
 
-    return paystackResponse.data
+  @inject()
+  async verifyAccountNumber({ request, response }: HttpContext) {
+    try {
+      const payload = request.all()
+      const accountNumber = payload.account_number
+      const bankCode = payload.bank_code
+
+      const accountNumberDetails = await this.paymentservice.verifyAccountNumber({
+        account_number: accountNumber,
+        bank_code: bankCode,
+      })
+      console.log(accountNumberDetails)
+      return response.ok({
+        success: true,
+        data: accountNumberDetails,
+        error: null,
+        meta: { timestamp: new Date().toISOString() },
+      })
+    } catch (error) {
+      console.log(error)
+      return response.badRequest({
+        success: false,
+        data: null,
+        error: error,
+      })
+    }
   }
 }
-
-export default new PaymentsService()

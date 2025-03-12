@@ -22,36 +22,38 @@ export const createEventValidator = vine.compile(
       audiomack_url: vine.string().optional(),
       facebook_url: vine.string().optional(),
     }),
-    thumbnails: vine.array(
-      vine.object({
-        url: vine.string(),
-        key: vine.string(),
-      })
-    ),
-    status: vine.enum(['draft', 'published']),
-    theme_settings: vine.object({
-      template: vine.enum([
-        'default',
-        'minimal',
-        'modern',
-        'classic',
-        'elegant',
-        'creative',
-        'vintage',
-        'futuristic',
-        'retro',
-        'gothic',
-        'boho',
-        'hipster',
-      ]),
-      primary_color: vine.string(),
-      secondary_color: vine.string(),
-      font_family: vine.string(),
-      hero_layout: vine.string(),
-      show_countdown: vine.boolean(),
-      custom_css: vine.string().optional(),
-      customDomain: vine.string().optional(),
-    }),
+    // thumbnails: vine
+    //   .array(
+    //     vine.object({
+    //       url: vine.string(),
+    //       key: vine.string(),
+    //     })
+    //   )
+    //   .optional(),
+    // status: vine.enum(['draft', 'published']),
+    // theme_settings: vine.object({
+    //   template: vine.enum([
+    //     'default',
+    //     'minimal',
+    //     'modern',
+    //     'classic',
+    //     'elegant',
+    //     'creative',
+    //     'vintage',
+    //     'futuristic',
+    //     'retro',
+    //     'gothic',
+    //     'boho',
+    //     'hipster',
+    //   ]),
+    //   primary_color: vine.string(),
+    //   secondary_color: vine.string(),
+    //   font_family: vine.string(),
+    //   hero_layout: vine.string(),
+    //   show_countdown: vine.boolean(),
+    //   custom_css: vine.string().optional(),
+    //   customDomain: vine.string().optional(),
+    // }),
   })
 )
 

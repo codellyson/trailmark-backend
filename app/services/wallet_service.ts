@@ -33,6 +33,8 @@ export default class WalletService {
         .forUpdate()
         .first()
 
+      console.log({ wallet })
+
       if (!wallet) {
         wallet = await Wallet.create(
           {
@@ -43,6 +45,7 @@ export default class WalletService {
           },
           { client: transactionClient }
         )
+        console.log('UPDATED WALLET', wallet.toJSON())
       }
 
       // Check for existing transaction to prevent duplicates
@@ -51,7 +54,9 @@ export default class WalletService {
         .first()
 
       if (existingTransaction) {
-        throw new Error('Transaction already processed')
+        console.log('Transaction already exists:', existingTransaction.toJSON())
+        // Instead of throwing error, return the existing transaction and wallet
+        return { wallet, transaction: existingTransaction }
       }
 
       // Validate balance for debit transactions
@@ -59,14 +64,22 @@ export default class WalletService {
         throw new Error('Insufficient funds')
       }
 
-      const balanceBefore = wallet.balance
-      const balanceAfter = type === 'credit' ? wallet.balance + amount : wallet.balance - amount
+      const balanceBefore = Number(wallet.balance || 0)
+      const balanceAfter = type === 'credit' ? balanceBefore + Number(amount) : balanceBefore - Number(amount)
+
+      console.log('Wallet transaction details:', {
+        balanceBefore,
+        balanceAfter,
+        amount: Number(amount),
+        type,
+        walletId: wallet.id,
+      })
 
       // Create transaction record
       const transaction = await WalletTransaction.create(
         {
           wallet_id: wallet.id,
-          amount,
+          amount: Number(amount),
           type,
           reference,
           description,
@@ -79,15 +92,24 @@ export default class WalletService {
         { client: transactionClient }
       )
 
-      // Update wallet balance
-      await wallet
-        .merge({
+      // Update wallet balance using direct query to ensure transaction is used
+      const updateResult = await Wallet.query({ client: transactionClient })
+        .where('id', wallet.id)
+        .update({
           balance: balanceAfter,
           updated_at: DateTime.now(),
         })
-        .save()
 
-      return { wallet, transaction }
+      console.log('Wallet update result:', { updateResult })
+
+      // Fetch the updated wallet
+      const updatedWallet = await Wallet.query({ client: transactionClient })
+        .where('id', wallet.id)
+        .firstOrFail()
+
+      console.log('Updated wallet:', updatedWallet.toJSON())
+
+      return { wallet: updatedWallet, transaction }
     }
 
     // If a transaction is provided, use it; otherwise create a new one

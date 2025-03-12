@@ -115,7 +115,51 @@ export default class WebhooksController {
         await trx.commit()
       } else if (paymentType === 'ticket') {
         const tickets = metadata.tickets
-        console.log('tickets', tickets)
+        console.log('Processing ticket payment:', {
+          tickets,
+          eventOrganiserId,
+          amount,
+          reference,
+        })
+
+        // Calculate total platform fee and organizer earnings
+        let totalPlatformFee = 0
+        let totalOrganizerEarnings = 0
+
+        for (const ticket of tickets) {
+          const ticketAmount = ticket.price * ticket.quantity
+          const platformFee = ticket.platform_fee * ticket.quantity
+          totalPlatformFee += platformFee
+          totalOrganizerEarnings += ticketAmount - platformFee
+        }
+
+        console.log('Processing wallet transaction for event organizer:', {
+          eventOrganiserId,
+          totalOrganizerEarnings,
+          totalPlatformFee,
+          reference,
+        })
+
+        // Credit only the organizer's earnings to their wallet
+        const walletResult = await this.walletService.processTransaction({
+          userId: eventOrganiserId,
+          amount: totalOrganizerEarnings,
+          type: 'credit',
+          reference,
+          description: 'Ticket sales earnings',
+          metadata: {
+            ...metadata,
+            total_amount: amount,
+            platform_fee: totalPlatformFee,
+            organizer_earnings: totalOrganizerEarnings,
+          },
+          paymentMethod: 'paystack',
+          trx,
+        })
+
+        console.log('Wallet transaction result:', walletResult)
+
+        // Only process ticket sales if wallet transaction was successful
         for (const ticket of tickets) {
           const existingTicket = await Ticket.find(ticket.id)
           if (!existingTicket) {
@@ -131,38 +175,32 @@ export default class WebhooksController {
               quantity_sold: existingTicket.quantity_sold + Number(ticket.quantity),
             })
 
+          const ticketAmount = ticket.price * ticket.quantity
+          const platformFee = ticket.platform_fee * ticket.quantity
+
           await TicketSale.create(
             {
               ticket_id: existingTicket.id,
               quantity: Number(ticket.quantity),
-              amount_paid: amount,
+              amount_paid: ticketAmount,
               payment_reference: reference,
               status: TicketSaleStatus.COMPLETED,
               event_id: existingTicket.event_id,
               buyer_id: eventOrganiserId,
-              platform_fee: existingTicket.calculatePlatformFee(amount),
-
+              platform_fee: platformFee,
               metadata: {
                 payment_type: 'ticket',
                 event_organiser_id: eventOrganiserId,
                 event_vendor_id: eventVendorId,
                 event_vendor_service_id: eventVendorServiceId,
+                total_amount: ticketAmount,
+                platform_fee: platformFee,
+                organizer_earnings: ticketAmount - platformFee,
               },
             },
             { client: trx }
           )
         }
-        // process wallet transaction
-        await this.walletService.processTransaction({
-          userId: eventOrganiserId,
-          amount,
-          type: 'credit',
-          reference,
-          description: 'Ticket purchase',
-          metadata,
-          paymentMethod: 'paystack',
-          trx,
-        })
 
         await trx.commit()
       }

@@ -8,6 +8,7 @@ const WalletsController = () => import('#controllers/wallets_controller')
 const StatsController = () => import('#controllers/stats_controller')
 const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
+const PaymentsController = () => import('#controllers/payments_controller')
 
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
@@ -97,6 +98,8 @@ router
   .group(() => {
     //  payments/webhook/paystack
     router.post('/payments/webhook/paystack', [WebhooksController, 'paystackWebhook'])
+    router.get('/payments/list-of-banks', [PaymentsController, 'listOfBanks'])
+    router.post('/payments/verify-account-number', [PaymentsController, 'verifyAccountNumber'])
   })
   .prefix('/api/v1')
 
@@ -106,6 +109,7 @@ router
     // Common routes
     router.get('/wallet', [WalletsController, 'getWallet'])
     router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
+    router.post('/payment/setup', [AuthController, 'setupPaymentDetails'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())

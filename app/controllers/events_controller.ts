@@ -69,48 +69,55 @@ export default class EventsController {
   }
 
   async createEvent({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(createEventValidator)
-    // Ensure JSON fields are properly formatted
-    console.log(payload)
+    try {
+      const payload = await request.validateUsing(createEventValidator)
+      const user = auth.user!
 
-    if (auth.user?.role !== 'user') {
-      return response.forbidden({
+      // Check if user has payment details set up
+      if (!user.payment_settings?.paystack_subaccount_code) {
+        return response.badRequest({
+          success: false,
+          error: {
+            code: 'PAYMENT_DETAILS_REQUIRED',
+            message: 'Please set up your payment details before creating an event',
+          },
+          meta: { timestamp: DateTime.now().toISO() },
+        })
+      }
+
+      const event = await Event.create({
+        ...payload,
+        start_date: DateTime.fromISO(payload.start_date),
+        end_date: DateTime.fromISO(payload.end_date),
+        user_id: user.id,
+        status: 'draft',
+        social_details: {
+          website_url: payload.social_details?.website_url,
+          instagram_handle: payload.social_details?.instagram_handle,
+          twitter_handle: payload.social_details?.twitter_handle,
+          audiomack_url: payload.social_details?.audiomack_url,
+          facebook_url: payload.social_details?.facebook_url,
+        },
+      })
+
+      return response.json({
+        success: true,
+        data: event,
+        error: null,
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    } catch (error) {
+      console.error('Error creating event:', error)
+      return response.internalServerError({
         success: false,
         data: null,
-        error: { code: 'UNAUTHORIZED', message: 'Only users can create events' },
-        meta: { timestamp: new Date().toISOString() },
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'Failed to create event',
+        },
+        meta: { timestamp: DateTime.now().toISO() },
       })
     }
-    console.log({ payload })
-    const event = await Event.create({
-      ...payload,
-      start_date: DateTime.fromISO(payload.start_date),
-      end_date: DateTime.fromISO(payload.end_date),
-      social_details: {
-        website_url: payload.social_details?.website_url,
-        instagram_handle: payload.social_details?.instagram_handle,
-        twitter_handle: payload.social_details?.twitter_handle,
-        audiomack_url: payload.social_details?.audiomack_url,
-        facebook_url: payload.social_details?.facebook_url,
-      },
-      thumbnails: payload.thumbnails,
-      theme_settings: {
-        template: payload.theme_settings?.template,
-        primary_color: payload.theme_settings?.primary_color,
-        secondary_color: payload.theme_settings?.secondary_color,
-        font_family: payload.theme_settings?.font_family,
-        hero_layout: payload.theme_settings?.hero_layout,
-        show_countdown: payload.theme_settings?.show_countdown,
-      },
-      user_id: Number(auth.user?.id),
-    })
-
-    return response.json({
-      success: true,
-      data: event,
-      error: null,
-      meta: { timestamp: new Date().toISOString() },
-    })
   }
 
   /**
@@ -466,7 +473,6 @@ export default class EventsController {
     try {
       const payload = await request.validateUsing(payForTicketValidator)
       const selectedTickets = payload.selectedTickets
-      let totalAmountInKobo = 0
 
       // Collect ticket details for metadata
       const ticketDetails = []
@@ -511,11 +517,6 @@ export default class EventsController {
           })
         }
 
-        const amount = Number.parseFloat(existingTicket.price.toString())
-        const PLATFORM_FEE = existingTicket.calculatePlatformFee(amount)
-        const totalAmount = existingTicket.calculateTotalPrice(ticket.quantity) + PLATFORM_FEE
-        totalAmountInKobo += totalAmount * 100
-
         ticketDetails.push({
           id: existingTicket.id,
           name: existingTicket.name,
@@ -523,9 +524,14 @@ export default class EventsController {
           quantity: ticket.quantity,
           type: existingTicket.type,
           event_id: existingTicket.event_id,
+          platform_fee: existingTicket.calculatePlatformFee(existingTicket.price),
         })
       }
       const eventOrganiserId = event.user_id
+      const totalAmount = ticketDetails.reduce((acc, ticket) => {
+        return acc + ticket.price * ticket.quantity + ticket.platform_fee * ticket.quantity
+      }, 0)
+      const totalAmountInKobo = totalAmount * 100
 
       const payment = await new PaymentService().createPayment({
         amount: totalAmountInKobo,

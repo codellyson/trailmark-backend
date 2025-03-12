@@ -1,11 +1,13 @@
 import User from '#models/user'
 import Wallet from '#models/wallet'
 import EmailService from '#services/email_service'
-import { inject } from '@adonisjs/core/container'
+import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 import hash from '@adonisjs/core/services/hash'
 import { updatePasswordValidator, updateUserValidator } from '#validators/auth'
+import { PaymentService } from '#services/payment_service'
+import { DateTime } from 'luxon'
 
 const loginValidator = vine.compile(
   vine.object({
@@ -26,7 +28,10 @@ const registerValidator = vine.compile(
 
 @inject()
 export default class AuthController {
-  constructor(private emailService: EmailService) {}
+  constructor(
+    private emailService: EmailService,
+    private paymentService: PaymentService
+  ) {}
 
   /**
    * Handle user login
@@ -285,5 +290,66 @@ export default class AuthController {
       success: true,
       data: user,
     })
+  }
+
+  async setupPaymentDetails({ request, response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+      const setupPaymentValidatorFn = vine.compile(
+        vine.object({
+          business_name: vine.string(),
+          business_address: vine.string(),
+          business_phone_number: vine.string(),
+          business_email: vine.string().email(),
+        })
+      )
+
+      const payload = await request.validateUsing(setupPaymentValidatorFn)
+
+      // Create Paystack subaccount
+      const subaccountResponse = await this.paymentService.generatePaystackSubaccount({
+        name: payload.business_name,
+        email: payload.business_email,
+        phone: payload.business_phone_number,
+        address: payload.business_address,
+      })
+
+      // Update user with payment settings
+      await user
+        .merge({
+          business_name: payload.business_name,
+          business_address: payload.business_address,
+          business_phone_number: payload.business_phone_number,
+          payment_settings: {
+            paystack_subaccount_code: subaccountResponse.data.subaccount_code,
+            paystack_subaccount_name: payload.business_name,
+            paystack_subaccount_phone: payload.business_phone_number,
+            paystack_subaccount_address: payload.business_address,
+          },
+        })
+        .save()
+
+      return response.json({
+        success: true,
+        data: {
+          message: 'Payment details set up successfully',
+          user: user,
+        },
+        error: null,
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    } catch (error) {
+      console.error('Error setting up payment details:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to set up payment details',
+          details: error.message,
+        },
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    }
   }
 }
