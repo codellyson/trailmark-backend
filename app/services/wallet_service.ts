@@ -4,9 +4,13 @@ import Wallet from '#models/wallet'
 import WalletTransaction from '#models/wallet_transaction'
 import { DateTime } from 'luxon'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import EmailService from '#services/email_service'
+import User from '#models/user'
 
 @inject()
 export default class WalletService {
+  constructor(private emailService: EmailService) {}
+
   async processTransaction({
     userId,
     amount,
@@ -65,7 +69,8 @@ export default class WalletService {
       }
 
       const balanceBefore = Number(wallet.balance || 0)
-      const balanceAfter = type === 'credit' ? balanceBefore + Number(amount) : balanceBefore - Number(amount)
+      const balanceAfter =
+        type === 'credit' ? balanceBefore + Number(amount) : balanceBefore - Number(amount)
 
       console.log('Wallet transaction details:', {
         balanceBefore,
@@ -108,6 +113,12 @@ export default class WalletService {
         .firstOrFail()
 
       console.log('Updated wallet:', updatedWallet.toJSON())
+
+      // Send email notification
+      const user = await User.find(userId)
+      if (user) {
+        await this.emailService.sendWalletUpdateNotification(user, transaction)
+      }
 
       return { wallet: updatedWallet, transaction }
     }

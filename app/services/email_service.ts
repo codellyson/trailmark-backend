@@ -1,15 +1,14 @@
 import env from '#start/env'
-import { DateTime } from 'luxon'
-import EventPayment from '#models/event_payment'
 import Booking from '#models/booking'
 import User from '#models/user'
-import EscrowAccount from '#models/escrow_account'
-import Addon from '#models/addon'
+
 import Event from '#models/event'
+import WalletTransaction from '#models/wallet_transaction'
 
 import mail from '@adonisjs/mail/services/main'
 import { MailService } from '@adonisjs/mail/types'
 import { inject } from '@adonisjs/core/container'
+import EventVendor from '#models/event_vendor'
 
 @inject()
 export default class EmailService {
@@ -24,9 +23,24 @@ export default class EmailService {
   }
 
   /**
+   * Check if we should send email to user based on their preferences
+   */
+  private shouldSendEmail(user: User): boolean {
+    // If preferences don't exist or email notifications setting doesn't exist, default to true
+    // if (!user.preferences || user.preferences.receive_email_notifications === undefined) {
+    //   return true
+    // }
+    // return user.preferences.receive_email_notifications
+
+    return true
+  }
+
+  /**
    * Send welcome email
    */
   async sendWelcome(user: User) {
+    if (!this.shouldSendEmail(user)) return
+
     await this.mailer.send((message) => {
       message
         .subject('Welcome to our platform')
@@ -57,9 +71,71 @@ export default class EmailService {
   }
 
   /**
+   * Send password change notification
+   */
+  async sendPasswordChangeNotification(user: User) {
+    if (!this.shouldSendEmail(user)) return
+
+    await this.mailer.send((message) => {
+      message
+        .subject('Password Changed Successfully')
+        .to(user.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/password_change', {
+          user,
+          timestamp: new Date().toISOString(),
+          logo: env.get('APP_LOGO_URL'),
+        })
+    })
+  }
+
+  /**
+   * Send account status change notification
+   */
+  async sendAccountStatusChangeNotification(user: User, oldStatus: string, newStatus: string) {
+    if (!this.shouldSendEmail(user)) return
+
+    await this.mailer.send((message) => {
+      message
+        .subject('Account Status Update')
+        .to(user.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/account_status_change', {
+          user,
+          oldStatus,
+          newStatus,
+          logo: env.get('APP_LOGO_URL'),
+        })
+    })
+  }
+
+  /**
+   * Send wallet balance update notification
+   */
+  async sendWalletUpdateNotification(user: User, transaction: WalletTransaction) {
+    if (!this.shouldSendEmail(user)) return
+
+    await user.load('wallet')
+
+    await this.mailer.send((message) => {
+      message
+        .subject('Wallet Balance Update')
+        .to(user.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/wallet_update', {
+          user,
+          transaction,
+          newBalance: user.wallet.balance,
+          logo: env.get('APP_LOGO_URL'),
+          appUrl: env.get('APP_URL'),
+        })
+    })
+  }
+
+  /**
    * Send payment confirmation email
    */
-  async sendPaymentConfirmation(payment: EventPayment) {
+  async sendPaymentConfirmation(payment: any) {
     try {
       // Get email from metadata if customer relation is not loaded
       const recipientEmail = payment.customer?.email || payment.metadata?.customer_info?.email
@@ -72,6 +148,9 @@ export default class EmailService {
         })
         throw new Error('Missing recipient email address')
       }
+
+      // Check email preferences if customer is loaded
+      if (payment.customer && !this.shouldSendEmail(payment.customer)) return
 
       console.log('Sending payment confirmation to:', recipientEmail)
 
@@ -154,50 +233,9 @@ export default class EmailService {
   }
 
   /**
-   * Send photographer assignment notification
-   */
-  async sendPhotographerAssignment(event: Event, photographer: User, addon: Addon) {
-    await this.mailer.send((message) => {
-      message
-        .subject(`New Photography Assignment - ${event.name}`)
-        .to(photographer.email)
-        .htmlView('mails/photographer_assignment', {
-          photographer,
-          event,
-          addon,
-          confirmationUrl: `${env.get('APP_URL')}/photographer/assignments/${event.id}/confirm`,
-          logo: env.get('APP_LOGO_URL'),
-          title: 'Photography Assignment',
-        })
-    })
-  }
-
-  /**
-   * Send escrow release notification
-   */
-  async sendEscrowRelease(escrow: EscrowAccount) {
-    await escrow.load('event')
-    await escrow.load('photographer')
-
-    await this.mailer.send((message) => {
-      message
-        .subject('Payment Released from Escrow')
-        .to(escrow.photographer.email)
-        .htmlView('mails/escrow_release', {
-          photographer: escrow.photographer,
-          event: escrow.event,
-          escrow,
-          walletUrl: `${env.get('APP_URL')}/photographer/wallet`,
-          logo: env.get('APP_LOGO_URL'),
-          title: 'Escrow Release Notification',
-        })
-    })
-  }
-
-  /**
    * Send refund notification
    */
-  async sendRefundNotification(payment: EventPayment) {
+  async sendRefundNotification(payment: any) {
     await payment.load('customer')
     await payment.load('event')
 
@@ -240,43 +278,90 @@ export default class EmailService {
   /**
    * Send photography service completion notification
    */
-  async sendPhotographyCompletion(event: Event, photographer: User, addon: Addon) {
-    await event.load('organizer')
-
-    await this.mailer.send((message) => {
-      message
-        .subject(`Photography Service Completed - ${event.title}`)
-        .to(event.organizer.email)
-        .htmlView('mails/photography_completion', {
-          organizer: event.organizer,
-          event,
-          photographer,
-          addon,
-          reviewUrl: `${env.get('APP_URL')}/organizer/events/${event.id}/review-photography`,
-          logo: env.get('APP_LOGO_URL'),
-          title: 'Photography Service Completion',
-        })
-    })
-  }
 
   /**
    * Send low ticket inventory alert to organizer
    */
   async sendLowTicketInventoryAlert(event: Event, ticketType: string, remainingCount: number) {
-    await event.load('organizer')
+    await event.load('user')
 
     await this.mailer.send((message) => {
       message
-        .subject(`Low Ticket Inventory Alert - ${event.name}`)
-        .to(event.organizer.email)
+        .subject(`Low Ticket Inventory Alert - ${event.title}`)
+        .to(event.user.email)
+        .from(this.from.address!, this.from.name)
         .htmlView('mails/low_ticket_inventory', {
           event,
-          organizer: event.organizer,
+          organizer: event.user,
           ticketType,
           remainingCount,
           manageUrl: `${env.get('APP_URL')}/organizer/events/${event.id}/tickets`,
           logo: env.get('APP_LOGO_URL'),
           title: 'Low Ticket Inventory Alert',
+        })
+    })
+  }
+
+  async sendVendorRegistrationConfirmation(vendor: User, vendorService: EventVendor) {
+    await vendorService.load('event')
+
+    await this.mailer.send((message) => {
+      message
+        .subject(`Vendor Registration Confirmation - ${vendorService.event.title}`)
+        .to(vendor.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/vendor_registration_confirmation', {
+          vendor,
+          vendorService,
+          logo: env.get('APP_LOGO_URL'),
+          appUrl: env.get('APP_URL'),
+          title: 'Vendor Registration Confirmation',
+        })
+    })
+  }
+
+  /**
+   * Send e-ticket email
+   */
+  async sendETicket(data: {
+    customer: { email: string; first_name?: string; last_name?: string }
+    event: any
+    tickets: any[]
+    reference: string
+    qrCodeUrl: string
+  }) {
+    await this.mailer.send((message) => {
+      message
+        .subject(`Your E-Ticket for ${data.event.title}`)
+        .to(data.customer.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/e_ticket', {
+          ...data,
+          appUrl: env.get('APP_URL'),
+          logo: env.get('APP_LOGO_URL'),
+        })
+    })
+  }
+
+  /**
+   * Send vendor pass email
+   */
+  async sendVendorPass(data: {
+    vendor: User
+    vendorService: EventVendor
+    event: Event
+    reference: string
+    qrCodeUrl: string
+  }) {
+    await this.mailer.send((message) => {
+      message
+        .subject(`Your Vendor Pass for ${data.event.title}`)
+        .to(data.vendor.email)
+        .from(this.from.address!, this.from.name)
+        .htmlView('mails/vendor_pass', {
+          ...data,
+          appUrl: env.get('APP_URL'),
+          logo: env.get('APP_LOGO_URL'),
         })
     })
   }

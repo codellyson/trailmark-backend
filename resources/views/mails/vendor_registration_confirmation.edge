@@ -1,0 +1,119 @@
+@layout.base()
+  @slot('meta')
+    <meta name="description" content="Vendor Registration Confirmation" />
+  @endslot
+  @slot('main')
+    <div
+      style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+    >
+      <div
+        style="background: #ED8433; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;"
+      >
+        <h2 style="margin: 0; font-size: 24px;">
+          Vendor Registration Confirmation
+        </h2>
+      </div>
+
+      <div style="padding: 30px; background: white;">
+        <p style="margin-bottom: 20px;">
+          Dear {{ vendor.first_name || vendor.email }},
+        </p>
+
+        <p style="margin-bottom: 20px;">
+          Your registration as a vendor for <strong>{{ vendorService.event.title }}</strong>has been confirmed. Thank you for choosing to be part of this event.
+        </p>
+
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">
+            Event Details
+          </h3>
+          <table style="width: 100%;">
+            <tr>
+              <td style="padding: 10px 0; color: #666;">
+                Event Name:
+              </td>
+              <td style="padding: 10px 0;">
+                {{ vendorService.event.title }}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #666;">
+                Date:
+              </td>
+              <td style="padding: 10px 0;">
+                {{ new Date(vendorService.event.start_date).toLocaleDateString() }}
+              </td>
+            </tr>
+            @if(vendorService.event.location)
+              <tr>
+                <td style="padding: 10px 0; color: #666;">
+                  Location:
+                </td>
+                <td style="padding: 10px 0;">
+                  {{ vendorService.event.location }}
+                </td>
+              </tr>
+            @endif
+            @if(vendorService.category)
+              <tr>
+                <td style="padding: 10px 0; color: #666;">
+                  Service Type:
+                </td>
+                <td style="padding: 10px 0;">
+                  {{ vendorService.category }}
+                </td>
+              </tr>
+            @endif
+          </table>
+        </div>
+
+        @if(vendorService.additional_info)
+          <div style="background: #e9ecef; padding: 15px; border-radius: 4px; margin: 20px 0;">
+            <p style="margin: 0; color: #495057;">
+              <strong>Additional Information:</strong>              <br />
+              {{ vendorService.additional_info }}
+            </p>
+          </div>
+        @endif
+
+        <div style="margin: 30px 0; padding: 20px; background-color: #fff3cd; border-radius: 4px;">
+          <p style="margin: 0; color: #856404;">
+            <strong>Important Notes:</strong>
+          </p>
+          <ul style="color: #856404; margin-top: 10px;">
+            <li>
+              Please arrive at least 2 hours before the event start time for setup
+            </li>
+            <li>
+              Bring all necessary equipment and materials for your service
+            </li>
+            <li>
+              Follow all venue guidelines and safety protocols
+            </li>
+            <li>
+              Keep your vendor badge/identification with you at all times
+            </li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a
+            href="{{ appUrl }}/vendor/events/{{ vendorService.event.id }}"
+            style="background: #ED8433; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;"
+          >
+            View Event Details
+          </a>
+        </div>
+
+        <p style="margin-top: 30px;">
+          If you have any questions or need to make changes to your registration, please contact the event organizer or our support team.
+        </p>
+
+        <p style="margin-top: 30px;">
+          Best regards,<br />
+          The Trailmark Team
+        </p>
+      </div>
+    </div>
+  @endslot
+@end

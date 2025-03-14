@@ -15,6 +15,7 @@ import WalletTransaction from '#models/wallet_transaction'
 import type { PaystackWebhookEvent } from '../types/paystack.js'
 import WalletService from '#services/wallet_service'
 import TicketSale, { TicketSaleStatus } from '#models/ticket_sale'
+import SocialSharingService from '#services/social_sharing_service'
 
 @inject()
 export default class WebhooksController {
@@ -90,8 +91,10 @@ export default class WebhooksController {
         if (!vendor) {
           throw new Error('Vendor not found')
         }
-
-        const vendorService = await EventVendor.find(eventVendorServiceId)
+        const vendorService = await EventVendor.query()
+          .where('service_id', eventVendorServiceId)
+          .where('vendor_id', vendorId)
+          .first()
         if (!vendorService) {
           throw new Error('Vendor service not found')
         }
@@ -113,7 +116,29 @@ export default class WebhooksController {
         })
 
         await trx.commit()
+
+        // Send vendor registration confirmation
+        await this.emailService.sendVendorRegistrationConfirmation(vendor, vendorService)
+
+        // Generate QR code URL for vendor pass
+        const qrCodeUrl = await new SocialSharingService().generateEventQR(
+          await Event.findOrFail(vendorService.event_id)
+        )
+
+        // Send vendor pass
+        await this.emailService.sendVendorPass({
+          vendor,
+          vendorService,
+          event: await Event.findOrFail(vendorService.event_id),
+          reference,
+          qrCodeUrl: qrCodeUrl.dataUrl,
+        })
       } else if (paymentType === 'ticket') {
+        const event = await Event.find(metadata.event_id)
+        if (!event) {
+          throw new Error('Event not found')
+        }
+
         const tickets = metadata.tickets
         console.log('Processing ticket payment:', {
           tickets,
@@ -203,6 +228,36 @@ export default class WebhooksController {
         }
 
         await trx.commit()
+
+        // Send payment confirmation email
+        await this.emailService.sendPaymentConfirmation({
+          id: webhookData.id,
+          reference: reference,
+          amount: amount,
+          metadata: metadata,
+          event: event,
+          customer: {
+            email: metadata.user,
+            first_name: metadata.user_info?.first_name || '',
+            last_name: metadata.user_info?.last_name || '',
+          },
+        })
+
+        // Generate QR code URL for e-ticket
+        const qrCodeUrl = await new SocialSharingService().generateEventQR(event)
+
+        // Send e-ticket email
+        await this.emailService.sendETicket({
+          customer: {
+            email: metadata.user,
+            first_name: metadata.user_info?.first_name || '',
+            last_name: metadata.user_info?.last_name || '',
+          },
+          event,
+          tickets: metadata.tickets,
+          reference,
+          qrCodeUrl: qrCodeUrl.dataUrl,
+        })
       }
     } catch (error) {
       await trx.rollback()

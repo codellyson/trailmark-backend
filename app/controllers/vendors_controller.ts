@@ -15,6 +15,7 @@ import { HttpStatusCode } from 'axios'
 import { DateTime } from 'luxon'
 import EventVendor from '#models/event_vendor'
 import { PaymentService } from '#services/payment_service'
+import vine from '@vinejs/vine'
 
 @inject()
 export default class VendorsController {
@@ -482,7 +483,7 @@ export default class VendorsController {
       })
     }
 
-    const custom_fields = [
+    const customFields = [
       {
         display_name: 'Vendor ID',
         variable_name: 'vendor_id',
@@ -526,7 +527,7 @@ export default class VendorsController {
         event_vendor_service_id: eventVendorService.id,
         vendor_id: vendor.id,
         event_id: eventVendorService.event_id,
-        custom_fields: custom_fields,
+        custom_fields: customFields,
       },
     })
     console.log({ paymentLink })
@@ -552,5 +553,158 @@ export default class VendorsController {
     const payment = await new PaymentService().verifyPayment(reference)
 
     return response.ok(payment)
+  }
+
+  async generateQuickVendorPaymentLink({ request, response, auth }: HttpContext) {
+    try {
+      const { eventId } = request.params()
+      const validationSchema = vine.compile(
+        vine.object({
+          vendorData: vine.object({
+            business_name: vine.string(),
+            email: vine.string(),
+            phone: vine.string(),
+            name: vine.string(),
+            description: vine.string(),
+            price: vine.number(),
+            price_type: vine.enum(['fixed', 'from', 'hourly', 'daily']),
+            category: vine.string(),
+            images: vine.array(vine.string()).optional(),
+            features: vine.array(vine.string()).optional(),
+            callback_url: vine.string().optional(),
+          }),
+        })
+      )
+
+      const payload = await validationSchema.validate(request.body())
+
+      const userByEmail = await User.findBy('email', payload.vendorData.email)
+      let vendor: User | null = null
+
+      if (!userByEmail) {
+        const password = Math.random().toString(36).substring(2, 15)
+        vendor = await User.create({
+          business_name: payload.vendorData.business_name,
+          email: payload.vendorData.email,
+          phone: payload.vendorData.phone,
+          password: password,
+          first_name: '',
+          last_name: '',
+          role: 'vendor',
+        })
+      } else {
+        vendor = userByEmail
+      }
+
+      // Create the vendor service first
+      const vendorService = await VendorService.create({
+        name: payload.vendorData.name,
+        price: payload.vendorData.price,
+        price_type: payload.vendorData.price_type,
+        user_id: vendor.id.toString(),
+        description: payload.vendorData.description,
+        category: payload.vendorData.category,
+        images: payload.vendorData.images || [],
+        features: payload.vendorData.features || [],
+        status: 'active',
+      })
+
+      try {
+        // Check if this specific service is already registered for this event
+        const existingEventVendor = await EventVendor.query()
+          .where('event_id', eventId)
+          .where('vendor_id', vendor.id.toString())
+          .where('service_id', vendorService.id.toString())
+          .first()
+
+        if (existingEventVendor) {
+          // Clean up the created service since we won't be using it
+          await vendorService.delete()
+          return response.badRequest({
+            success: false,
+            error: 'This service is already registered for this event',
+          })
+        }
+
+        const eventVendor = await EventVendor.create({
+          event_id: eventId,
+          service_id: vendorService.id.toString(),
+          vendor_id: vendor.id.toString(),
+          agreed_price: vendorService.price,
+        })
+
+        const event = await Event.find(eventId)
+        const eventOrganiserId = event?.user_id
+
+        const VENDOR_REGISTRATION_FEE = Number.parseFloat(event?.vendor_charge.toString()!)
+        const PLATFORM_FEE = 0.05
+        const PERCENT = VENDOR_REGISTRATION_FEE * PLATFORM_FEE
+        const totalAmount = VENDOR_REGISTRATION_FEE + PERCENT
+        const totalAmountInLowestCurrency = Math.round(totalAmount * 100)
+
+        const paymentLink = await new PaymentService().createPayment({
+          email: vendor.email,
+          amount: totalAmountInLowestCurrency,
+          reference: this.generateReference(),
+          metadata: {
+            payment_type: 'vendor_registration',
+            event_organiser_id: eventOrganiserId,
+            event_vendor_id: eventVendor.id,
+            event_vendor_service_id: eventVendor.service_id,
+            vendor_id: vendor.id.toString(),
+            event_id: eventId,
+          },
+          callback_url: payload.vendorData.callback_url,
+        })
+
+        return response.ok({
+          success: true,
+          data: {
+            ...paymentLink.data,
+            vendor,
+            vendorService,
+            eventVendor,
+          },
+          error: null,
+        })
+      } catch (error) {
+        // If anything fails after creating the vendor service, clean it up
+        await vendorService.delete()
+        throw error
+      }
+    } catch (error) {
+      console.error('Error in generateQuickVendorPaymentLink:', error)
+      return response.internalServerError({
+        success: false,
+        error: 'An error occurred while generating the payment link',
+      })
+    }
+  }
+
+  async verifyVendorPaymentLink({ request, response, auth }: HttpContext) {
+    try {
+      const { eventId } = request.params()
+      const { reference } = request.body()
+
+      const payment = await new PaymentService().verifyPayment(reference)
+
+      if (payment.status === 'success') {
+        return response.ok({
+          success: true,
+          data: payment,
+        })
+      }
+
+      return response.badRequest({
+        success: false,
+        error: 'Payment failed',
+      })
+    } catch (error) {
+      console.error('Error in verifyVendorPaymentLink:', error)
+      return response.internalServerError({
+        success: false,
+        error: 'An error occurred while verifying the payment link',
+      })
+    }
   }
 }

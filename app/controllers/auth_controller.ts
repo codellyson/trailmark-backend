@@ -200,6 +200,7 @@ export default class AuthController {
         email: payload.email,
         avatar_url: payload.avatar_url,
         bio: payload.bio,
+        // @ts-expect-error
         social_links: payload.social_links || {
           instagram: null,
           facebook: null,
@@ -218,6 +219,7 @@ export default class AuthController {
         business_category: payload.business_category,
         business_logo: payload.business_logo,
         business_banner: payload.business_banner,
+        // @ts-expect-error
         preferences:
           payload.preferences! ||
           {
@@ -280,6 +282,9 @@ export default class AuthController {
     userDetails.password = newPassword
     await userDetails.save()
 
+    // Send password change notification
+    await this.emailService.sendPasswordChangeNotification(userDetails)
+
     return response.json({ success: true })
   }
 
@@ -297,10 +302,9 @@ export default class AuthController {
       const user = auth.user!
       const setupPaymentValidatorFn = vine.compile(
         vine.object({
-          business_name: vine.string(),
-          business_address: vine.string(),
-          business_phone_number: vine.string(),
-          business_email: vine.string().email(),
+          account_name: vine.string(),
+          account_number: vine.string(),
+          bank_code: vine.string(),
         })
       )
 
@@ -308,23 +312,23 @@ export default class AuthController {
 
       // Create Paystack subaccount
       const subaccountResponse = await this.paymentService.generatePaystackSubaccount({
-        name: payload.business_name,
-        email: payload.business_email,
-        phone: payload.business_phone_number,
-        address: payload.business_address,
+        business_name: user.business_name!,
+        account_number: payload.account_number,
+        bank_code: payload.bank_code,
+        percentage_charge: 0.1,
       })
 
       // Update user with payment settings
       await user
         .merge({
-          business_name: payload.business_name,
-          business_address: payload.business_address,
-          business_phone_number: payload.business_phone_number,
+          business_name: user.business_name!,
+          business_address: user.business_address!,
+          business_phone_number: user.business_phone_number!,
           payment_settings: {
             paystack_subaccount_code: subaccountResponse.data.subaccount_code,
-            paystack_subaccount_name: payload.business_name,
-            paystack_subaccount_phone: payload.business_phone_number,
-            paystack_subaccount_address: payload.business_address,
+            paystack_subaccount_name: user.business_name!,
+            paystack_subaccount_phone: user.business_phone_number!,
+            paystack_subaccount_address: user.business_address!,
           },
         })
         .save()
@@ -346,6 +350,36 @@ export default class AuthController {
         error: {
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to set up payment details',
+          details: error.message,
+        },
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    }
+  }
+
+  async removePaymentDetails({ auth, response }: HttpContext) {
+    try {
+      const user = auth.user!
+      await user
+        .merge({
+          payment_settings: null,
+        })
+        .save()
+
+      return response.json({
+        success: true,
+        data: {
+          message: 'Payment details removed successfully',
+        },
+      })
+    } catch (error) {
+      console.error('Error removing payment details:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to remove payment details',
           details: error.message,
         },
         meta: { timestamp: DateTime.now().toISO() },

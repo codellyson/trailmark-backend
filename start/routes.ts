@@ -9,15 +9,23 @@ const StatsController = () => import('#controllers/stats_controller')
 const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
 const PaymentsController = () => import('#controllers/payments_controller')
+const AdminController = () => import('#controllers/admin_controller')
 
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
+router.group(() => {
+  // Auth routes
+  router.post('/auth/login', [AuthController, 'login'])
+  router.post('/auth/register', [AuthController, 'register'])
+  router.post('/auth/refresh', [AuthController, 'refresh']).use(middleware.auth())
+})
+
 router
   .group(() => {
-    // Auth routes
-    router.post('/auth/login', [AuthController, 'login'])
-    router.post('/auth/register', [AuthController, 'register'])
-    router.post('/auth/refresh', [AuthController, 'refresh']).use(middleware.auth())
+    router.post('/events/:eventId/quick-vendor-payment-link', [
+      VendorsController,
+      'generateQuickVendorPaymentLink',
+    ])
   })
   .prefix('/api/v1')
 
@@ -44,14 +52,7 @@ router
     router.post('/events/:id/vendor-applications', [EventsController, 'createVendorApplication'])
     router.get('/events/:id/vendor-applications', [EventsController, 'getVendorApplications'])
     router.post('/events/:id/vendor-express-interest', [VendorsController, 'vendorExpressInterest'])
-    router.get('/events/:id/vendor-pay-for-application', [
-      VendorsController,
-      'vendorPayForApplication',
-    ])
-    router.post('/events/generate-vendor-payment-link', [
-      EventsController,
-      'generateVendorPaymentLink',
-    ])
+
     // router
     //   .post('/events/:id/tickets', [EventsController, 'createEventTicket'])
     //   .use(middleware.auth())
@@ -110,6 +111,7 @@ router
     router.get('/wallet', [WalletsController, 'getWallet'])
     router.get('/wallet/transactions', [WalletsController, 'getTransactions'])
     router.post('/payment/setup', [AuthController, 'setupPaymentDetails'])
+    router.delete('/payment/remove', [AuthController, 'removePaymentDetails'])
   })
   .prefix('/api/v1')
   .use(middleware.auth())
@@ -128,6 +130,10 @@ router
     router.get('public/vendors', [VendorsController, 'index'])
     router.get('vendors/services/search', [VendorsController, 'searchByServices'])
     router.get('vendors/listing', [VendorsController, 'vendorListing'])
+    router.post('/vendors/:vendorId/payment-link/verify', [
+      VendorsController,
+      'verifyVendorPaymentLink',
+    ])
 
     // Protected routes
     router
@@ -155,7 +161,6 @@ router
         router.get('/vendors/favorites', [VendorsController, 'getFavoriteVendors'])
         router.post('/vendors/:id/favorite', [VendorsController, 'toggleFavoriteVendor'])
         router.post('/vendors/:serviceId/payment-link', [VendorsController, 'generatePaymentLink'])
-        router.post('/vendors/:serviceId/verify-payment', [VendorsController, 'verifyPayment'])
       })
       .use(middleware.auth())
 
@@ -176,3 +181,23 @@ router
 router.group(() => {
   router.get('/events/upcoming', [EventsController, 'getUpcomingEvents'])
 })
+
+// Admin Routes
+router
+  .group(() => {
+    router.put('/users/:id/status', [AdminController, 'updateUserStatus'])
+  })
+  .prefix('/api/v1/admin')
+  .use(middleware.auth())
+  .use(async (ctx, next) => {
+    const user = ctx.auth.user
+    if (!user || user.role !== 'admin') {
+      return ctx.response.forbidden({
+        success: false,
+        data: null,
+        error: { code: 'FORBIDDEN', message: 'Admin access required' },
+        meta: { timestamp: new Date().toISOString() },
+      })
+    }
+    await next()
+  })

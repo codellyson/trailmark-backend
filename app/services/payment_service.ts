@@ -17,6 +17,7 @@ export class PaymentService {
     amount: number
     reference: string
     metadata: any
+    callback_url?: string
   }) {
     try {
       const response = await axios.post(`${this.paystackBaseURL}/transaction/initialize`, payload, {
@@ -33,11 +34,12 @@ export class PaymentService {
   }
 
   public async generatePaystackSubaccount(payload: {
-    email: string
-    name: string
-    phone: string
-    address: string
+    business_name: string
+    account_number: string
+    bank_code: string
+    percentage_charge: number
   }) {
+    // What is required for a subaccount? business_name, bank_code, account_number, percentage_charge.
     const response = await axios.post(`${this.paystackBaseURL}/subaccount`, payload, {
       headers: {
         Authorization: `Bearer ${env.get('PAYSTACK_SECRET_KEY')}`,
@@ -77,7 +79,7 @@ export class PaymentService {
       },
     })
 
-    return response.data
+    return response.data.data
   }
 
   public async getPaymentDetails(reference: string) {
