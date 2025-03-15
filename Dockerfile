@@ -29,9 +29,8 @@ RUN node ace build --ignore-ts-errors
 # Production stage
 FROM base
 ENV NODE_ENV=production
-ENV HOST=0.0.0.0
 ENV PORT=3333
-ENV FONTCONFIG_PATH=/etc/fonts
+ENV HOST=0.0.0.0
 WORKDIR /app
 
 # Copy production files
@@ -42,4 +41,6 @@ COPY --from=build /app/database ./database
 COPY --from=build /app/config ./config
 
 EXPOSE 3333
-CMD ["node", "./build/bin/server.js"]
+
+# Start the server and run migrations
+CMD node ace migration:run --force && node ./build/bin/server.js
