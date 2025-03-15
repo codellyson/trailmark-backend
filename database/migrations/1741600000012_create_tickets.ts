@@ -1,6 +1,5 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
-// Example migration file
 export default class extends BaseSchema {
   protected tableName = 'tickets'
 
@@ -20,10 +19,14 @@ export default class extends BaseSchema {
       table.integer('group_size').notNullable().defaultTo(1)
       table.integer('min_per_order').nullable()
       table.integer('max_per_order').nullable()
-      table.timestamp('sale_starts_at').nullable()
-      table.timestamp('sale_ends_at').nullable()
+      table.timestamp('sale_starts_at', { useTz: true }).nullable()
+      table.timestamp('sale_ends_at', { useTz: true }).nullable()
       table.timestamp('created_at', { useTz: true })
       table.timestamp('updated_at', { useTz: true })
     })
+  }
+
+  public async down() {
+    this.schema.dropTable(this.tableName)
   }
 }

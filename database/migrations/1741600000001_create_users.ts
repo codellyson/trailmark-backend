@@ -50,6 +50,7 @@ export default class extends BaseSchema {
       table.jsonb('payment_settings').defaultTo('{}')
       table.jsonb('commission_settings').defaultTo('{}')
       table.jsonb('permissions').defaultTo('{}')
+      table.jsonb('favorite_vendors').defaultTo('[]')
       table.string('timezone').defaultTo('UTC')
       table.string('language').defaultTo('en')
 

@@ -44,10 +44,30 @@ export default class extends BaseSchema {
         })
       )
 
+      // Social metrics
+      table.jsonb('social_metrics').defaultTo(
+        JSON.stringify({
+          facebook: { shares: 0, views: 0, clicks: 0 },
+          twitter: { shares: 0, views: 0, clicks: 0 },
+          instagram: { shares: 0, views: 0, clicks: 0 },
+          whatsapp: { shares: 0, views: 0, clicks: 0 },
+        })
+      )
+
       // Thumbnails as JSON array
       table.json('thumbnails').defaultTo('[]')
 
+      // Vendor related
+      table.decimal('vendor_charge', 10, 2).defaultTo(0)
+
+      // Event sale and confirmation
+      table.string('confirmation_message').nullable()
+      table.jsonb('event_sale_status').nullable()
+
+      // Relations
       table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE')
+
+      // Timestamps
       table.timestamp('created_at', { useTz: true })
       table.timestamp('updated_at', { useTz: true })
     })

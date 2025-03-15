@@ -459,7 +459,7 @@ export default class VendorsController {
     })
   }
   generateReference() {
-    return 'NE-VENDOR-' + Math.random().toString(36).substring(2, 15)
+    return 'NE-VENDOR-' + Math.random().toString(36).substring(2, 5)
   }
   async generatePaymentLink({ request, response, auth }: HttpContext) {
     const { serviceId } = request.params()

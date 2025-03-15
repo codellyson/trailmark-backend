@@ -464,7 +464,7 @@ export default class EventsController {
   }
 
   generateReference() {
-    return `NE-TICKET-${Math.random().toString(36).substring(2, 15)}`
+    return `NE-TICKET-${Math.random().toString(36).substring(2, 5)}`.toUpperCase()
   }
 
   async payForTicket({ request, response, auth }: HttpContext) {
