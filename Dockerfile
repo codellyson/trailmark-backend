@@ -1,46 +1,29 @@
-FROM node:18-bookworm-slim AS base
-WORKDIR /app
-RUN apt update
-RUN apt install -y curl wget fontconfig
-RUN rm -rf /var/lib/apt/lists/*
-
-# Base installer
-FROM base AS installer
-RUN corepack enable
-RUN corepack prepare pnpm@latest --activate
-# Copy package files first
-COPY package.json pnpm-lock.yaml ./
+FROM node:20.12.2-alpine3.18 AS base
 
 # All deps stage
-FROM installer AS deps
-RUN pnpm install --frozen-lockfile
+FROM base AS deps
+WORKDIR /app
+ADD package.json package-lock.json ./
+RUN npm ci
 
 # Production only deps stage
-FROM installer AS production-deps
-RUN pnpm install --prod --frozen-lockfile
+FROM base AS production-deps
+WORKDIR /app
+ADD package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 # Build stage
-FROM installer AS build
-COPY . .
+FROM base AS build
+WORKDIR /app
 COPY --from=deps /app/node_modules /app/node_modules
-ENV NODE_ENV=production
-RUN node ace build --ignore-ts-errors
+ADD . .
+RUN node ace build
 
 # Production stage
 FROM base
 ENV NODE_ENV=production
-ENV PORT=3333
-ENV HOST=0.0.0.0
 WORKDIR /app
-
-# Copy production files
-COPY --from=production-deps /app/node_modules ./node_modules
-COPY --from=build /app/build ./build
-COPY --from=build /app/ace ./ace
-COPY --from=build /app/database ./database
-COPY --from=build /app/config ./config
-
-EXPOSE 3333
-
-# Start the server and run migrations
-CMD node ace migration:run --force && node ./build/server.js
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=build /app/build /app
+EXPOSE 8080
+CMD ["node", "./bin/server.js"]
