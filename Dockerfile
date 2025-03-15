@@ -21,7 +21,8 @@ RUN pnpm install --prod --frozen-lockfile
 # Build stage
 FROM installer AS build
 COPY --from=deps /app/node_modules /app/node_modules
-RUN node ace build --production --ignore-ts-errors
+ENV NODE_ENV=production
+RUN node ace build --ignore-ts-errors
 
 # Production stage
 FROM base
