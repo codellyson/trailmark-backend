@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node ace migration:run --force"
+    "docker:build": "docker build -t trailmark-backend .",
+    "docker:start": "docker run -p 3333:3333 trailmark-backend"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
