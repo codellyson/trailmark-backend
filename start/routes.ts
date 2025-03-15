@@ -201,3 +201,8 @@ router
     }
     await next()
   })
+
+// Health check endpoint
+router.get('/health', async () => {
+  return { status: 'healthy' }
+})

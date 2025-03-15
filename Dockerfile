@@ -1,43 +1,41 @@
-# Stage 1: Dependencies
-FROM node:20-alpine as dependencies
-RUN npm install -g pnpm
+FROM node:lts-bookworm-slim AS base
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+RUN apt update
+RUN apt install -y curl wget fontconfig
+RUN rm -rf /var/lib/apt/lists/*
+
+# Base installer
+FROM base AS installer
+RUN corepack enable
+RUN corepack prepare pnpm@latest --activate
+COPY . .
+
+# All deps stage
+FROM installer AS deps
 RUN pnpm install --frozen-lockfile
 
-# Stage 2: Builder
-FROM node:20-alpine as builder
-RUN npm install -g pnpm
-WORKDIR /app
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .
-RUN pnpm build
-
-# Stage 3: Runner
-FROM node:20-alpine as runner
-RUN npm install -g pnpm
-WORKDIR /app
-
-# Copy built assets
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
-
-# Install production dependencies only
+# Production only deps stage
+FROM installer AS production-deps
 RUN pnpm install --prod --frozen-lockfile
 
-# Copy necessary files for migrations
-COPY --from=builder /app/database ./database
-COPY --from=builder /app/config ./config
-COPY --from=builder /app/ace ./ace
+# Build stage
+FROM installer AS build
+COPY --from=deps /app/node_modules /app/node_modules
+RUN node ace build --production --ignore-ts-errors
 
-# Set environment variables
+# Production stage
+FROM base
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3333
+ENV FONTCONFIG_PATH=/etc/fonts
 
-# Expose the port
+# Copy production files
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=build /app/build /app/build
+COPY --from=build /app/ace /app/ace
+COPY --from=build /app/database /app/database
+COPY --from=build /app/config /app/config
+
 EXPOSE 3333
-
-# Start the server
-CMD ["pnpm", "start"]
+CMD ["node", "./build/server.js"]
