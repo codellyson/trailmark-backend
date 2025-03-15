@@ -1,4 +1,4 @@
-FROM node:lts-bookworm-slim AS base
+FROM node:18-bookworm-slim AS base
 WORKDIR /app
 RUN apt update
 RUN apt install -y curl wget fontconfig
@@ -36,11 +36,11 @@ WORKDIR /app
 # Copy production files
 COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
-COPY --from=build /app/build/ace.js ./ace
+COPY --from=build /app/ace ./ace
 COPY --from=build /app/database ./database
 COPY --from=build /app/config ./config
 
 EXPOSE 3333
 
 # Start the server and run migrations
-CMD node ace migration:run --force && node ./build/bin/server.js
+CMD node ace migration:run --force && node ./build/server.js
