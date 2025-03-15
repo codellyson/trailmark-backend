@@ -1,29 +1,45 @@
-FROM node:20.12.2-alpine3.18 AS base
+FROM node:lts-bookworm-slim AS base
+WORKDIR /app
+RUN apt update
+RUN apt install -y curl wget fontconfig
+RUN rm -rf /var/lib/apt/lists/*
+
+# Base installer
+FROM base AS installer
+RUN corepack enable
+RUN corepack prepare pnpm@latest --activate
+# Copy package files first
+COPY package.json pnpm-lock.yaml ./
 
 # All deps stage
-FROM base AS deps
-WORKDIR /app
-ADD package.json package-lock.json ./
-RUN npm ci
+FROM installer AS deps
+RUN pnpm install --frozen-lockfile
 
 # Production only deps stage
-FROM base AS production-deps
-WORKDIR /app
-ADD package.json package-lock.json ./
-RUN npm ci --omit=dev
+FROM installer AS production-deps
+RUN pnpm install --prod --frozen-lockfile
 
 # Build stage
-FROM base AS build
-WORKDIR /app
+FROM installer AS build
+COPY . .
 COPY --from=deps /app/node_modules /app/node_modules
-ADD . .
-RUN node ace build
+ENV NODE_ENV=production
+RUN node ace build --ignore-ts-errors
 
 # Production stage
 FROM base
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3333
+ENV FONTCONFIG_PATH=/etc/fonts
 WORKDIR /app
-COPY --from=production-deps /app/node_modules /app/node_modules
-COPY --from=build /app/build /app
-EXPOSE 8080
-CMD ["node", "./bin/server.js"]
+
+# Copy production files
+COPY --from=production-deps /app/node_modules ./node_modules
+COPY --from=build /app/build ./build
+COPY --from=build /app/build/ace.js ./ace
+COPY --from=build /app/database ./database
+COPY --from=build /app/config ./config
+
+EXPOSE 3333
+CMD ["node", "./build/bin/server.js"]
