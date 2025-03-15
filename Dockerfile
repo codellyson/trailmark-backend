@@ -10,7 +10,6 @@ RUN corepack enable
 RUN corepack prepare pnpm@latest --activate
 # Copy package files first
 COPY package.json pnpm-lock.yaml ./
-COPY ace ace
 
 # All deps stage
 FROM installer AS deps
@@ -38,9 +37,9 @@ WORKDIR /app
 # Copy production files
 COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
-COPY --from=build /app/ace ./ace
+COPY --from=build /app/build/ace.js ./ace
 COPY --from=build /app/database ./database
 COPY --from=build /app/config ./config
 
 EXPOSE 3333
-CMD ["node", "./build/server.js"]
+CMD ["node", "./build/bin/server.js"]
