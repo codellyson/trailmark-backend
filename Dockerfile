@@ -1,6 +1,6 @@
 FROM node:lts-bookworm-slim AS base
 WORKDIR /app
-RUN apt update
+RUN apt update && apt install -y curl && rm -rf /var/lib/apt/lists/*
 
 #install pnpm
 RUN npm install -g pnpm
