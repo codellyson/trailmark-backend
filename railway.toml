@@ -7,4 +7,4 @@ healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-startCommand = "node ace migration:run --force && node build/server.js"
+startCommand = "node ace migration:run --force && node server.js"
