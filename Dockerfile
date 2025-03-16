@@ -2,6 +2,9 @@ FROM node:lts-bookworm-slim AS base
 WORKDIR /app
 RUN apt update
 
+#install pnpm
+RUN npm install -g pnpm
+
 # Base installer
 FROM base AS installer
 RUN corepack enable
