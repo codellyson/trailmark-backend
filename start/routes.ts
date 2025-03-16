@@ -11,6 +11,11 @@ const SocialSharingController = () => import('#controllers/social_sharing_contro
 const PaymentsController = () => import('#controllers/payments_controller')
 const AdminController = () => import('#controllers/admin_controller')
 
+// Health check endpoint (must be at root level for Railway)
+router.get('/health', async () => {
+  return { status: 'healthy' }
+})
+
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
 router.group(() => {
@@ -201,8 +206,3 @@ router
     }
     await next()
   })
-
-// Health check endpoint
-router.get('/health', async () => {
-  return { status: 'healthy' }
-})
