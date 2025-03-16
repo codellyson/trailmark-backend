@@ -39,6 +39,10 @@ COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/database ./database
 COPY --from=build /app/config ./config
+COPY --from=build /app/ace ./ace
+COPY --from=build /app/build/ace.js ./ace.js
+COPY --from=build /app/build/adonisrc.js ./adonisrc.js
+COPY --from=build /app/build/package.json ./package.json
 
 EXPOSE 3333
 
