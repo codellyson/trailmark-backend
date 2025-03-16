@@ -33,15 +33,12 @@ RUN node ace build --ignore-ts-errors
 FROM base
 ENV NODE_ENV=production
 WORKDIR /app
-
-# Copy production dependencies
-COPY --from=production-deps /app/node_modules ./node_modules
-
-# Copy all build artifacts
-COPY --from=build /app/build ./
-COPY --from=build /app/package.json ./
-
+# Copy production files
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=build /app/build /app
 EXPOSE 3333
-CMD ["node", "server.js"]
+CMD ["node", "./bin/server.js"]
 
-
+# Add health check after CMD to ensure application is running
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3333/health || exit 1
