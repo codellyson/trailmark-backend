@@ -40,14 +40,13 @@ WORKDIR /app
 COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/build/ace.js ./ace.js
-COPY --from=build /app/build/adonisrc.js ./adonisrc.js
 COPY --from=build /app/database ./database
+COPY --from=build /app/bin ./bin
 
 EXPOSE 3333
 
 # Run migrations and start the server
-CMD node ace migration:run --force && node ./build/bin/server.js
+CMD node ./build/bin/console.js migration:run --force && node ./build/bin/server.js
 
 # Add health check after CMD to ensure application is running
 HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 \
