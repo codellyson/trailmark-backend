@@ -32,12 +32,17 @@ RUN node ace build --ignore-ts-errors
 # Production stage
 FROM base
 ENV NODE_ENV=production
+ENV PORT=3333
+ENV HOST=0.0.0.0
 WORKDIR /app
+
 # Copy production files
-COPY --from=production-deps /app/node_modules /app/node_modules
-COPY --from=build /app/build /app
+COPY --from=production-deps /app/node_modules ./node_modules
+COPY --from=build /app/build ./build
+COPY --from=build /app/package.json ./package.json
+
 EXPOSE 3333
-CMD ["node", "./bin/server.js"]
+CMD ["node", "./build/bin/server.js"]
 
 # Add health check after CMD to ensure application is running
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
