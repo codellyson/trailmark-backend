@@ -18,12 +18,14 @@ router.get('/health', async () => {
 
 router.get('/', () => 'Hello World').prefix('/api/v1')
 
-router.group(() => {
-  // Auth routes
-  router.post('/auth/login', [AuthController, 'login'])
-  router.post('/auth/register', [AuthController, 'register'])
-  router.post('/auth/refresh', [AuthController, 'refresh']).use(middleware.auth())
-})
+router
+  .group(() => {
+    // Auth routes
+    router.post('/auth/login', [AuthController, 'login'])
+    router.post('/auth/register', [AuthController, 'register'])
+    router.post('/auth/refresh', [AuthController, 'refresh']).use(middleware.auth())
+  })
+  .prefix('/api/v1')
 
 router
   .group(() => {
