@@ -10,6 +10,7 @@ const VendorsController = () => import('#controllers/vendors_controller')
 const SocialSharingController = () => import('#controllers/social_sharing_controller')
 const PaymentsController = () => import('#controllers/payments_controller')
 const AdminController = () => import('#controllers/admin_controller')
+const NotificationsController = () => import('#controllers/notifications_controller')
 
 // Health check endpoint (must be at root level for Railway)
 router.get('/health', async () => {
@@ -208,3 +209,12 @@ router
     }
     await next()
   })
+
+// Notification routes
+router
+  .group(() => {
+    router.post('/notifications/subscribe', [NotificationsController, 'subscribe'])
+    router.post('/notifications/unsubscribe', [NotificationsController, 'unsubscribe'])
+  })
+  .prefix('/api/v1')
+  .use(middleware.auth())

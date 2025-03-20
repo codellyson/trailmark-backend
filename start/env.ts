@@ -55,4 +55,21 @@ export default await Env.create(new URL('../', import.meta.url), {
   SMTP_PASSWORD: Env.schema.string(),
   MAIL_FROM_ADDRESS: Env.schema.string(),
   MAIL_FROM_NAME: Env.schema.string(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring the firebase package
+  |----------------------------------------------------------
+  */
+
+  FIREBASE_SERVICE_ACCOUNT: Env.schema.string(),
+  FIREBASE_PROJECT_ID: Env.schema.string(),
+  // FIREBASE_PRIVATE_KEY_ID: Env.schema.string(),
+  // FIREBASE_PRIVATE_KEY: Env.schema.string(),
+  // FIREBASE_CLIENT_EMAIL: Env.schema.string(),
+  // FIREBASE_CLIENT_ID: Env.schema.string(),
+  // FIREBASE_AUTH_URI: Env.schema.string(),
+  // FIREBASE_TOKEN_URI: Env.schema.string(),
+  // FIREBASE_AUTH_PROVIDER_X509_CERT_URL: Env.schema.string(),
+  // FIREBASE_CLIENT_X509_CERT_URL: Env.schema.string(),
 })
