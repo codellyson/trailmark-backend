@@ -67,6 +67,7 @@
     "@vinejs/vine": "^2.1.0",
     "axios": "^1.7.9",
     "edge.js": "^6.2.1",
+    "firebase-admin": "^13.2.0",
     "google-auth-library": "^9.15.0",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.5.0",
