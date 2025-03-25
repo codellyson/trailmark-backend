@@ -59,7 +59,41 @@ export default class EventsController {
       },
     })
   }
-
+  async getPublicEvents({ request, response }: HttpContext) {
+    try {
+      const page = request.input('page', 1)
+      const limit = request.input('limit', 10)
+      const dateRange = request.input('date_range')
+      const query = Event.query()
+        .where('status', 'published')
+        .preload('tickets')
+        .if(dateRange, (q) => {
+          const [start, end] = dateRange.split(',')
+          return q.whereBetween('eventDate', [start, end])
+        })
+      const events = await query.paginate(page, limit)
+      return response.json({
+        success: true,
+        data: events,
+        error: null,
+        meta: {
+          pagination: events.getMeta(),
+          timestamp: new Date().toISOString(),
+        },
+      })
+    } catch (error) {
+      console.error('Error fetching public events:', error)
+      return response.internalServerError({
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch public events',
+        },
+        meta: { timestamp: DateTime.now().toISO() },
+      })
+    }
+  }
   /**
    * Create a new event
    */

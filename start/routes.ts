@@ -51,6 +51,7 @@ router
 router
   .group(() => {
     router.get('/events', [EventsController, 'getEvents']).use(middleware.auth())
+    router.get('/events/public', [EventsController, 'getPublicEvents'])
     router.get('/events/upcoming', [EventsController, 'getUpcomingEvents']).use(middleware.auth())
     router.put('/events/:id', [EventsController, 'updateEvent']).use(middleware.auth())
     router.get('/events/:id', [EventsController, 'getEvent']).use(middleware.auth())
@@ -135,7 +136,7 @@ router
 router
   .group(() => {
     // Public routes
-    router.get('public/vendors', [VendorsController, 'index'])
+    router.get('vendors/public', [VendorsController, 'index'])
     router.get('vendors/services/search', [VendorsController, 'searchByServices'])
     router.get('vendors/listing', [VendorsController, 'vendorListing'])
     router.post('/vendors/:vendorId/payment-link/verify', [
@@ -175,6 +176,9 @@ router
     // .use(middleware.admin())
   })
   .prefix('/api/v1')
+
+  // vendors/services/public
+  router.get('/vendors/services/public', [VendorsController, 'getPublicVendorServices'])
 
 // Social sharing routes
 router

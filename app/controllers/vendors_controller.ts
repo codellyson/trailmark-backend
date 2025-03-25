@@ -29,14 +29,6 @@ export default class VendorsController {
 
     const query = User.query().where('role', 'vendor')
 
-    if (search) {
-      query.where((builder) => {
-        builder
-          .where('business_name', 'ILIKE', `%${search}%`)
-          .orWhere('business_description', 'ILIKE', `%${search}%`)
-      })
-    }
-
     try {
       query.preload('vendor_services')
       const vendors = await query.paginate(page, limit)
@@ -52,6 +44,15 @@ export default class VendorsController {
             avatar_url: vendor.avatar_url,
             business_email: vendor.email,
             business_name: vendor.business_name,
+            business_description: vendor.business_description,
+            business_category: vendor.business_category,
+            business_location: vendor.business_location,
+            business_phone: vendor.business_phone,
+            business_website: vendor.business_website,
+            business_social_media: vendor.business_social_media,
+            business_social_media_links: vendor.business_social_media_links,
+            business_address: vendor.business_address,
+
             status: vendor.status,
             services: vendor.vendor_services,
           })),
@@ -123,6 +124,25 @@ export default class VendorsController {
     })
   }
 
+  async getPublicVendorServices({ request, response }: HttpContext) {
+    try {
+      const services = await VendorService.query().where('status', 'active')
+      return response.status(HttpStatusCode.Ok).json({
+        success: true,
+        data: services,
+        error: null,
+        meta: {
+          timestamp: DateTime.now().toISO(),
+        },
+      })
+    } catch (error) {
+      console.error('Error fetching public vendor services:', error)
+      return response.internalServerError({
+        success: false,
+        error: 'An error occurred while fetching public vendor services',
+      })
+    }
+  }
   async updateVendor({ request, response, auth }: HttpContext) {
     const id = auth.user?.id
     const { data } = request.body()
