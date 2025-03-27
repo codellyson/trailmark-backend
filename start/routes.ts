@@ -11,7 +11,7 @@ const SocialSharingController = () => import('#controllers/social_sharing_contro
 const PaymentsController = () => import('#controllers/payments_controller')
 const AdminController = () => import('#controllers/admin_controller')
 const NotificationsController = () => import('#controllers/notifications_controller')
-
+const WaitlistController = () => import('#controllers/waitlist_controller')
 // Health check endpoint (must be at root level for Railway)
 router.get('/health', async () => {
   return { status: 'healthy' }
@@ -177,8 +177,8 @@ router
   })
   .prefix('/api/v1')
 
-  // vendors/services/public
-  router.get('/vendors/services/public', [VendorsController, 'getPublicVendorServices'])
+// vendors/services/public
+router.get('/vendors/services/public', [VendorsController, 'getPublicVendorServices'])
 
 // Social sharing routes
 router
@@ -222,3 +222,5 @@ router
   })
   .prefix('/api/v1')
   .use(middleware.auth())
+
+router.post('/waitlist', [WaitlistController, 'join']).prefix('/api/v1')

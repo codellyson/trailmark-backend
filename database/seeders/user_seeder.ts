@@ -7,7 +7,7 @@ export default class extends BaseSeeder {
     await User.create({
       first_name: 'Admin',
       last_name: 'User',
-      email: 'admin@trailmark.com',
+      email: 'admin@NaijaEvents.com',
       password: 'Password123!',
       role: 'admin' as const,
       status: 'active' as const,

@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 
 export default class extends BaseSeeder {
   async run() {
-    const admin = await User.findBy('email', 'admin@trailmark.com')
+    const admin = await User.findBy('email', 'admin@NaijaEvents.com')
     const regularUser = await User.findBy('email', 'user@example.com')
 
     console.log('Admin user:', admin?.id)

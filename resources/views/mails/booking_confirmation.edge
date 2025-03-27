@@ -8,7 +8,7 @@
     >
       {{-- Header Section with Background Image --}}
       <div
-        style="background: linear-gradient(45deg, #ED8433, #f4a261); padding: 40px 20px; text-align: center; position: relative;"
+        style="background: linear-gradient(45deg, #008080, #f4a261); padding: 40px 20px; text-align: center; position: relative;"
       >
         <div
           style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 10px;"
@@ -35,7 +35,7 @@
         </p>
 
         <p style="margin-bottom: 30px; font-size: 16px; color: #2d3748; line-height: 1.6;">
-          Your booking for <strong style="color: #ED8433;">{{ event.title }}</strong>has been confirmed!
+          Your booking for <strong style="color: #008080;">{{ event.title }}</strong>has been confirmed!
         </p>
 
         {{-- Booking Details Card --}}
@@ -43,7 +43,7 @@
           style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #e9ecef;"
         >
           <h3
-            style="margin: 0 0 20px 0; color: #2d3748; font-size: 18px; border-bottom: 2px solid #ED8433; padding-bottom: 10px; display: inline-block;"
+            style="margin: 0 0 20px 0; color: #2d3748; font-size: 18px; border-bottom: 2px solid #008080; padding-bottom: 10px; display: inline-block;"
           >
             Booking Details
           </h3>
@@ -78,7 +78,7 @@
             style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #e9ecef;"
           >
             <h3
-              style="margin: 0 0 20px 0; color: #2d3748; font-size: 18px; border-bottom: 2px solid #ED8433; padding-bottom: 10px; display: inline-block;"
+              style="margin: 0 0 20px 0; color: #2d3748; font-size: 18px; border-bottom: 2px solid #008080; padding-bottom: 10px; display: inline-block;"
             >
               Your Tickets 🎟️
             </h3>
@@ -94,7 +94,7 @@
                   {{ ticket?.ticket_name || 'Unnamed Ticket' }}
                 </span>
                 <span
-                  style="background: #ED8433; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px;"
+                  style="background: #008080; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px;"
                 >
                   {{ ticket?.quantity || 0 }}x
                 </span>
@@ -104,7 +104,7 @@
         @endif
 
         <p
-          style="margin: 25px 0; color: #718096; font-size: 14px; line-height: 1.6; background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ED8433;"
+          style="margin: 25px 0; color: #718096; font-size: 14px; line-height: 1.6; background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #008080;"
         >
           Please keep this email for your records. You may need to show your booking reference at the event.
         </p>
@@ -113,7 +113,7 @@
         <div style="text-align: center; margin: 35px 0;">
           <a
             href="{{ bookingUrl }}"
-            style="background: #ED8433; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(237, 132, 51, 0.2);"
+            style="background: #008080; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(237, 132, 51, 0.2);"
           >
             View Booking Details
           </a>
