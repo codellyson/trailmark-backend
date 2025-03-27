@@ -9,6 +9,7 @@ import mail from '@adonisjs/mail/services/main'
 import { MailService } from '@adonisjs/mail/types'
 import { inject } from '@adonisjs/core/container'
 import EventVendor from '#models/event_vendor'
+import Waitlist from '#models/waitlist'
 
 @inject()
 export default class EmailService {
@@ -353,16 +354,71 @@ export default class EmailService {
     reference: string
     qrCodeUrl: string
   }) {
-    await this.mailer.send((message) => {
-      message
-        .subject(`Your Vendor Pass for ${data.event.title}`)
-        .to(data.vendor.email)
-        .from(this.from.address!, this.from.name)
-        .htmlView('mails/vendor_pass', {
-          ...data,
-          appUrl: env.get('APP_URL'),
-          logo: env.get('APP_LOGO_URL'),
-        })
-    })
+    await this.mailer
+      .send((message) => {
+        message
+          .subject(`Your Vendor Pass for ${data.event.title}`)
+          .to(data.vendor.email)
+          .from(this.from.address!, this.from.name)
+          .htmlView('mails/vendor_pass', {
+            ...data,
+            appUrl: env.get('APP_URL'),
+            logo: env.get('APP_LOGO_URL'),
+          })
+      })
+      .then((response) => {
+        console.log('Vendor pass email sent successfully', response)
+      })
+      .catch((error) => {
+        console.error('Failed to send vendor pass email:', error)
+      })
+  }
+
+  async sendWaitlistSignupEmail(payload: { business_name: string; email: string; role: string }) {
+    await this.mailer
+      .send((message) => {
+        message
+          .to(env.get('MAIL_FROM_ADDRESS')!)
+          .from(this.from.address!, this.from.name)
+          .subject('Waitlist Signup')
+          .htmlView('mails/waitlist_signup', {
+            business_name: payload.business_name,
+            email: payload.email,
+            role: payload.role,
+            timestamp: new Date().toISOString(),
+            logo: env.get('APP_LOGO_URL'),
+            appUrl: env.get('APP_URL'),
+          })
+      })
+      .then((response) => {
+        console.log('Waitlist signup email sent successfully', response)
+      })
+      .catch((error) => {
+        console.error('Failed to send waitlist signup email:', error)
+      })
+  }
+
+  async sendNewWaitlistSignupToAdminEmail(entry: Waitlist) {
+    await this.mailer
+      .send((message) => {
+        message
+          .to(env.get('ADMIN_EMAIL')!)
+          .from(this.from.address!, this.from.name)
+          .subject('New Waitlist Signup')
+          .htmlView('mails/new_waitlist_signup_to_admin', {
+            business_name: entry.business_name,
+            email: entry.email,
+            role: entry.role,
+            timestamp: entry.created_at.toISO(),
+            logo: env.get('APP_LOGO_URL'),
+            appUrl: env.get('APP_URL'),
+          })
+      })
+      .then((response) => {
+        console.log('New waitlist signup email sent successfully', response)
+      })
+      .catch((error) => {
+        console.error('Failed to send new waitlist signup email:', error)
+      })
   }
 }

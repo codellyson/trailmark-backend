@@ -46,7 +46,7 @@ export default class SocialSharingService {
         image: thumbnailUrl,
         url: eventUrl,
         type: 'website',
-        site_name: env.get('APP_NAME', 'TrailMark'),
+        site_name: env.get('APP_NAME', 'NaijaEvents'),
       },
       // Twitter Card metadata
       twitter: {

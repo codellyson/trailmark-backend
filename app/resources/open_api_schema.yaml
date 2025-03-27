@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: TrailMark API
+  title: NaijaEvents API
   version: 1.0.0
   description: API for managing outdoor events, bookings, and photography services
 

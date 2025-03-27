@@ -64,12 +64,6 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   FIREBASE_SERVICE_ACCOUNT: Env.schema.string(),
   FIREBASE_PROJECT_ID: Env.schema.string(),
-  // FIREBASE_PRIVATE_KEY_ID: Env.schema.string(),
-  // FIREBASE_PRIVATE_KEY: Env.schema.string(),
-  // FIREBASE_CLIENT_EMAIL: Env.schema.string(),
-  // FIREBASE_CLIENT_ID: Env.schema.string(),
-  // FIREBASE_AUTH_URI: Env.schema.string(),
-  // FIREBASE_TOKEN_URI: Env.schema.string(),
-  // FIREBASE_AUTH_PROVIDER_X509_CERT_URL: Env.schema.string(),
-  // FIREBASE_CLIENT_X509_CERT_URL: Env.schema.string(),
+  SUPPORT_EMAIL: Env.schema.string(),
+  ADMIN_EMAIL: Env.schema.string(),
 })

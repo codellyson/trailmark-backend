@@ -52,7 +52,7 @@ export default class TicketPassService {
 
       const eventTicketClass = {
         id: `EVENT_CLASS_${event.id}`,
-        issuerName: 'Trailmark Events',
+        issuerName: 'NaijaEvents Events',
         eventName: {
           defaultValue: {
             language: 'en-US',
