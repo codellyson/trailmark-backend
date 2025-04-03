@@ -650,7 +650,7 @@ export default class VendorsController {
           event_id: eventId,
           service_id: vendorService.id.toString(),
           vendor_id: vendor.id.toString(),
-          agreed_price: vendorService.price,
+          // agreed_price: vendorService.price,
         })
 
         const event = await Event.find(eventId)

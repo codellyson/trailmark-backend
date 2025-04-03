@@ -135,7 +135,7 @@ export const createVendorApplicationValidator = vine.compile(
         vendor_id: vine.string(),
         booth_number: vine.string(),
         booth_location: vine.string(),
-        agreed_price: vine.number(),
+        // agreed_price: vine.number(),
         setup_time: vine.string(),
         teardown_time: vine.string(),
         service_id: vine.string(),
