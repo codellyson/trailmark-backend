@@ -27,20 +27,20 @@ export const createEventTicketValidator = vine.compile(
 
 // Update ticket validator
 export const updateEventTicketValidator = vine.compile(
-  vine.object({
-    data: vine
-      .object({
-        tickets: vine
-          .array(
-            vine.object({
+  vine
+    .object({
+      data: vine
+        .object({
+          ticket: vine
+            .object({
               id: vine.number(),
               ...eventTicketSchema.getProperties(),
             })
-          )
-          .optional(),
-      })
-      .optional(),
-  })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional()
 )
 
 export const updateEventTicketStatusValidator = vine.compile(

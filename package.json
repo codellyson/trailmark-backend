@@ -1,5 +1,5 @@
 {
-  "name": "NaijaEvents-backend",
+  "name": "naija-events-backend",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,8 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "docker:build": "docker build -t NaijaEvents-backend .",
-    "docker:start": "docker run -p 3333:3333 NaijaEvents-backend"
+    "docker:build": "docker build -t naija-events-backend .",
+    "docker:start": "docker run -p 3333:3333 naija-events-backend"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",

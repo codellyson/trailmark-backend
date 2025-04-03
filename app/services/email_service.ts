@@ -378,7 +378,7 @@ export default class EmailService {
     await this.mailer
       .send((message) => {
         message
-          .to(env.get('MAIL_FROM_ADDRESS')!)
+          .to(payload.email)
           .from(this.from.address!, this.from.name)
           .subject('Waitlist Signup')
           .htmlView('mails/waitlist_signup', {
@@ -402,7 +402,7 @@ export default class EmailService {
     await this.mailer
       .send((message) => {
         message
-          .to(env.get('ADMIN_EMAIL')!)
+          .to(this.from.address!)
           .from(this.from.address!, this.from.name)
           .subject('New Waitlist Signup')
           .htmlView('mails/new_waitlist_signup_to_admin', {

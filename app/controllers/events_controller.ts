@@ -1,33 +1,25 @@
 import Event from '#models/event'
+import EventVendor from '#models/event_vendor'
 import Ticket, { TicketStatus, TicketType } from '#models/ticket'
-import User from '#models/user'
+import VendorService from '#models/vendor_service'
+import { PaymentService } from '#services/payment_service'
 import {
   createEventValidator,
   createVendorApplicationValidator,
-  generateVendorPaymentLinkValidator,
   updateEventValidator,
 } from '#validators/event'
-import { createAddonValidator } from '#validators/event_add_on'
 import {
   createEventTicketValidator,
   payForTicketValidator,
-  updateEventTicketStatusValidator,
   updateEventTicketValidator,
 } from '#validators/event_ticket'
+import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
-import Booking from '#models/booking'
-import { inject } from '@adonisjs/core'
-import TicketPassService from '#services/ticket_pass_service'
-import { generateQRCode, generateTicketNumber } from '../utils/ticket.js'
-import Vendor from '#models/event_vendor'
-import EventVendor from '#models/event_vendor'
-import VendorService from '#models/vendor_service'
-import { PaymentService } from '#services/payment_service'
 
 @inject()
 export default class EventsController {
-  constructor(private ticketPassService: TicketPassService) {}
+  constructor() {}
 
   /**
    * List all events with optional filters
@@ -274,7 +266,7 @@ export default class EventsController {
     })
   }
 
-  async getEventTickets({ request, response, auth }: HttpContext) {
+  async getEventTickets({ request, response }: HttpContext) {
     const params = request.params()
     const event = await Event.findOrFail(params.eventId)
     const tickets = await Ticket.query().where('event_id', event.id).preload('event')
@@ -288,49 +280,45 @@ export default class EventsController {
     })
   }
 
-  async updateEventTicket({ request, response, auth }: HttpContext) {
+  async updateEventTicket({ request, response }: HttpContext) {
     const payload = await request.validateUsing(updateEventTicketValidator)
-    const params = request.params()
+    console.log(JSON.stringify(payload, null, 2))
 
-    if (!payload.data?.tickets || !payload.data.tickets.length) {
+    if (!payload?.data?.ticket) {
       return response.badRequest({
         success: false,
-        error: 'No tickets data provided',
+        error: 'No ticket data provided',
       })
     }
 
-    const updatedTickets = await Promise.all(
-      payload.data.tickets.map(async (ticketData) => {
-        const ticket = await Ticket.findOrFail(ticketData.id)
-        //@ts-expect-error - This is a workaround to remove the created_at and updated_at properties
-        const { id, created_at: createAt, updated_at: updateAt, ...updateData } = ticketData
-        return ticket
-          .merge({
-            ...updateData,
-            perks: updateData.perks || [],
-            sale_ends_at: updateData.sale_ends_at
-              ? DateTime.fromISO(updateData.sale_ends_at)
-              : undefined,
-            sale_starts_at: updateData.sale_starts_at
-              ? DateTime.fromISO(updateData.sale_starts_at)
-              : undefined,
-            status: (updateData.status as TicketStatus) || TicketStatus.DRAFT,
-            description: updateData.description || undefined,
-            type: (updateData.type as TicketType) || TicketType.PAID,
-          })
-          .save()
+    const updatedTicket = await Ticket.findOrFail(payload.data.ticket.id)
+    //@ts-expect-error - This is a workaround to remove the created_at and updated_at properties
+    const { id, created_at: createAt, updated_at: updateAt, ...updateData } = payload.data.ticket
+    await updatedTicket
+      .merge({
+        ...updateData,
+        perks: updateData.perks || [],
+        sale_ends_at: updateData.sale_ends_at
+          ? DateTime.fromISO(updateData.sale_ends_at)
+          : undefined,
+        sale_starts_at: updateData.sale_starts_at
+          ? DateTime.fromISO(updateData.sale_starts_at)
+          : undefined,
+        status: (updateData.status as TicketStatus) || TicketStatus.DRAFT,
+        description: updateData.description || undefined,
+        type: (updateData.type as TicketType) || TicketType.PAID,
       })
-    )
+      .save()
 
     return response.json({
       success: true,
-      data: updatedTickets,
+      data: updatedTicket,
       error: null,
       meta: { timestamp: new Date().toISOString() },
     })
   }
 
-  async deleteEventTicket({ request, response, auth }: HttpContext) {
+  async deleteEventTicket({ request, response }: HttpContext) {
     const params = request.params()
     const ticket = await Ticket.findOrFail(params.id)
     await ticket.delete()
@@ -343,7 +331,7 @@ export default class EventsController {
     })
   }
 
-  async createVendorApplication({ request, response, auth }: HttpContext) {
+  async createVendorApplication({ request, response }: HttpContext) {
     const payload = await request.validateUsing(createVendorApplicationValidator)
     const vendors = payload.vendors
     const params = request.params()
@@ -434,7 +422,7 @@ export default class EventsController {
     }
   }
 
-  async getVendorApplications({ request, response, auth }: HttpContext) {
+  async getVendorApplications({ request, response }: HttpContext) {
     const params = request.params()
     const event = await Event.findOrFail(params.eventId)
     const vendorApplications = await EventVendor.query().where('event_id', event.id)
@@ -446,10 +434,8 @@ export default class EventsController {
     })
   }
 
-  async generateVendorPaymentLink({ request, response, auth }: HttpContext) {
-    const payload = await request.validateUsing(generateVendorPaymentLinkValidator)
+  async generateVendorPaymentLink({ request, response }: HttpContext) {
     const params = request.params()
-    const event = await Event.findOrFail(params.eventId)
     const vendorApplication = await EventVendor.findOrFail(params.id)
     return response.json({
       success: true,
@@ -459,7 +445,7 @@ export default class EventsController {
     })
   }
 
-  async createEventTicket({ request, response, auth }: HttpContext) {
+  async createEventTicket({ request, response }: HttpContext) {
     const payload = await request.validateUsing(createEventTicketValidator)
     const data = payload.data
     const params = request.params()
@@ -485,7 +471,7 @@ export default class EventsController {
     })
   }
 
-  async getUpcomingEvents({ request, response, auth }: HttpContext) {
+  async getUpcomingEvents({ response, auth }: HttpContext) {
     const events = await Event.query()
       .where('user_id', auth.user!.id)
       .where('start_date', '>', DateTime.now().toISO())
@@ -501,7 +487,7 @@ export default class EventsController {
     return `NE-TICKET-${Math.random().toString(36).substring(2, 5)}`.toUpperCase()
   }
 
-  async payForTicket({ request, response, auth }: HttpContext) {
+  async payForTicket({ request, response }: HttpContext) {
     const params = request.params()
     const event = await Event.findOrFail(params.eventId)
     try {
